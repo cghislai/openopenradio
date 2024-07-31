@@ -77,6 +77,8 @@ dependencies {
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -91,6 +93,7 @@ dependencies {
 
     annotationProcessor(libs.androidx.room.compiler)
     kapt(libs.hilt.compiler)
+    kapt(libs.androidx.hilt.compiler)
     kapt(libs.androidx.room.compiler)
 }
 

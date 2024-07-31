@@ -41,10 +41,6 @@ public class RadioService extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        genreRepository.fetchGenres();
-        countryRepository.fetchCountries();
-        languageRepository.fetchLanguages();
-        stationRepository.fetchStations();
         return binder;
     }
 

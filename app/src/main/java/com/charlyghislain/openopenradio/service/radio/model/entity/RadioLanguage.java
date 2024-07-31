@@ -1,4 +1,4 @@
-package com.charlyghislain.openopenradio.service.radio.model;
+package com.charlyghislain.openopenradio.service.radio.model.entity;
 
 import androidx.annotation.NonNull;
 import androidx.room.ColumnInfo;

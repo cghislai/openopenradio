@@ -3,8 +3,8 @@ package com.charlyghislain.openopenradio.service.radio.repository;
 import androidx.lifecycle.LiveData;
 
 import com.charlyghislain.openopenradio.service.radio.dao.RadioLanguageDao;
-import com.charlyghislain.openopenradio.service.radio.model.RadioLanguage;
-import com.charlyghislain.openopenradio.service.radio.model.RadioSource;
+import com.charlyghislain.openopenradio.service.radio.model.entity.RadioLanguage;
+import com.charlyghislain.openopenradio.service.radio.model.entity.RadioSource;
 import com.charlyghislain.openopenradio.service.util.RequestCallback;
 import com.charlyghislain.openopenradio.service.client.webradio.WebRadioClient;
 
@@ -23,6 +23,12 @@ public class LanguageRepository {
     }
 
     public LiveData<List<String>> getLanguages() {
+        fetchLanguages();
+
+        return radioLanguageDao.getAllLanguageNames();
+    }
+
+    public void fetchLanguages() {
         webRadioClient.getLanguages(createAsyncCallback(value -> {
             List<RadioLanguage> radioLanguageList = value.stream()
                     .map(v -> new RadioLanguage(RadioSource.WEBRADIOS, v))
@@ -30,8 +36,6 @@ public class LanguageRepository {
             radioLanguageDao.clearLanguages(RadioSource.WEBRADIOS);
             radioLanguageDao.addLanguages(radioLanguageList);
         }));
-
-        return radioLanguageDao.getAllLanguageNames();
     }
 
 

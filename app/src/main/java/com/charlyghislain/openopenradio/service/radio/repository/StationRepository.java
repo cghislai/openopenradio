@@ -5,8 +5,8 @@ import androidx.lifecycle.LiveData;
 import com.charlyghislain.openopenradio.service.client.webradio.WebRadioClient;
 import com.charlyghislain.openopenradio.service.client.webradio.model.WebRadioStation;
 import com.charlyghislain.openopenradio.service.radio.dao.RadioStationDao;
-import com.charlyghislain.openopenradio.service.radio.model.RadioSource;
-import com.charlyghislain.openopenradio.service.radio.model.RadioStation;
+import com.charlyghislain.openopenradio.service.radio.model.entity.RadioSource;
+import com.charlyghislain.openopenradio.service.radio.model.entity.RadioStation;
 import com.charlyghislain.openopenradio.service.util.RequestCallback;
 
 import java.util.List;
@@ -23,6 +23,12 @@ public class StationRepository {
     }
 
     public LiveData<List<RadioStation>> getStations() {
+        fetchStations();
+
+        return radioStationDao.getAllStations();
+    }
+
+    public void fetchStations() {
         webRadioClient.getStations(createAsyncCallback(value -> {
             List<RadioStation> radioLanguageList = value.stream()
                     .map(this::createRadioStation)
@@ -30,8 +36,6 @@ public class StationRepository {
             radioStationDao.clearStations(RadioSource.WEBRADIOS);
             radioStationDao.addStations(radioLanguageList);
         }));
-
-        return radioStationDao.getAllStations();
     }
 
     private RadioStation createRadioStation(WebRadioStation webRadioStation) {
@@ -41,6 +45,10 @@ public class StationRepository {
         );
         radioStation.setName(webRadioStation.getName());
         radioStation.setStreamUrl(webRadioStation.getStreamUri());
+        radioStation.setCountry(webRadioStation.getCountry());
+        radioStation.setLanguages(webRadioStation.getLanguages());
+        radioStation.setGenres(webRadioStation.getGenre());
+
         return radioStation;
     }
 

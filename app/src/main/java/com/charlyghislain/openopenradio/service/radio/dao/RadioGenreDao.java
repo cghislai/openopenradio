@@ -6,8 +6,9 @@ import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 
-import com.charlyghislain.openopenradio.service.radio.model.RadioGenre;
-import com.charlyghislain.openopenradio.service.radio.model.RadioSource;
+import com.charlyghislain.openopenradio.service.radio.model.GenreWithStats;
+import com.charlyghislain.openopenradio.service.radio.model.entity.RadioGenre;
+import com.charlyghislain.openopenradio.service.radio.model.entity.RadioSource;
 
 import java.util.Collection;
 import java.util.List;
@@ -24,4 +25,11 @@ public interface RadioGenreDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void addGenres(Collection<RadioGenre> genres);
 
+    @Query("WITH GenreWithStats AS (\n" +
+            "            SELECT g.name AS name,\n" +
+            "               (SELECT COUNT(*) FROM radio_station s WHERE LOWER(s.genres) LIKE '%' || LOWER(g.name) ||'%') AS stationCount\n" +
+            "    FROM radio_genre g\n" +
+            "    )\n" +
+            "    SELECT name, stationCount FROM GenreWithStats\n")
+    LiveData<List<GenreWithStats>> getGenreWithStats();
 }

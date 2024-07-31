@@ -4,8 +4,8 @@ import androidx.lifecycle.LiveData;
 
 import com.charlyghislain.openopenradio.service.client.webradio.WebRadioClient;
 import com.charlyghislain.openopenradio.service.radio.dao.RadioCountryDao;
-import com.charlyghislain.openopenradio.service.radio.model.RadioCountry;
-import com.charlyghislain.openopenradio.service.radio.model.RadioSource;
+import com.charlyghislain.openopenradio.service.radio.model.entity.RadioCountry;
+import com.charlyghislain.openopenradio.service.radio.model.entity.RadioSource;
 import com.charlyghislain.openopenradio.service.util.RequestCallback;
 
 import java.util.List;
@@ -22,6 +22,12 @@ public class CountryRepository {
     }
 
     public LiveData<List<String>> getCountrys() {
+        fetchCountries();
+
+        return radioCountryDao.getAllCountryNames();
+    }
+
+    public void fetchCountries() {
         webRadioClient.getCountries(createAsyncCallback(value -> {
             List<RadioCountry> radioCountryList = value.stream()
                     .map(v -> new RadioCountry(RadioSource.WEBRADIOS, v))
@@ -29,8 +35,6 @@ public class CountryRepository {
             radioCountryDao.clearCountries(RadioSource.WEBRADIOS);
             radioCountryDao.addCountries(radioCountryList);
         }));
-
-        return radioCountryDao.getAllCountryNames();
     }
 
 

@@ -9,7 +9,8 @@ import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 
 import com.charlyghislain.openopenradio.service.radio.dao.RadioDatabase;
-import com.charlyghislain.openopenradio.service.radio.model.RadioStation;
+import com.charlyghislain.openopenradio.service.radio.model.GenreWithStats;
+import com.charlyghislain.openopenradio.service.radio.model.entity.RadioStation;
 import com.charlyghislain.openopenradio.service.radio.repository.CountryRepository;
 import com.charlyghislain.openopenradio.service.radio.repository.GenreRepository;
 import com.charlyghislain.openopenradio.service.radio.repository.LanguageRepository;
@@ -40,7 +41,10 @@ public class RadioService extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        boolean open = radioDatabase.isOpen();
+        genreRepository.fetchGenres();
+        countryRepository.fetchCountries();
+        languageRepository.fetchLanguages();
+        stationRepository.fetchStations();
         return binder;
     }
 
@@ -52,8 +56,8 @@ public class RadioService extends Service {
             this.service = service;
         }
 
-        public LiveData<List<String>> getGenres() {
-            return service.genreRepository.getGenres();
+        public LiveData<List<GenreWithStats>> getGenres() {
+            return service.genreRepository.getGenreWithStats();
         }
 
         public LiveData<List<String>> getCountries() {

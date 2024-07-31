@@ -6,8 +6,8 @@ import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 
-import com.charlyghislain.openopenradio.service.radio.model.RadioCountry;
-import com.charlyghislain.openopenradio.service.radio.model.RadioSource;
+import com.charlyghislain.openopenradio.service.radio.model.entity.RadioCountry;
+import com.charlyghislain.openopenradio.service.radio.model.entity.RadioSource;
 
 import java.util.Collection;
 import java.util.List;

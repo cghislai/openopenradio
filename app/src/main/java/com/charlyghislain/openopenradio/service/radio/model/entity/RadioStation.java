@@ -1,10 +1,14 @@
-package com.charlyghislain.openopenradio.service.radio.model;
+package com.charlyghislain.openopenradio.service.radio.model.entity;
 
 
 import androidx.annotation.NonNull;
 import androidx.room.ColumnInfo;
 import androidx.room.Entity;
-import androidx.room.PrimaryKey;
+import androidx.room.TypeConverters;
+
+import com.charlyghislain.openopenradio.service.radio.util.StringListConverter;
+
+import java.util.List;
 
 
 @Entity(tableName = "radio_station", primaryKeys = {"source", "sourceId"})
@@ -24,6 +28,15 @@ public class RadioStation {
     @ColumnInfo
     @NonNull
     private String streamUrl;
+
+    @ColumnInfo
+    @TypeConverters(StringListConverter.class)
+    private List<String> languages;
+    @ColumnInfo
+    @TypeConverters(StringListConverter.class)
+    private List<String> genres;
+    @ColumnInfo
+    private String country;
 
 
     public RadioStation(@NonNull RadioSource source, @NonNull String sourceId) {
@@ -65,5 +78,29 @@ public class RadioStation {
 
     public void setStreamUrl(@NonNull String streamUrl) {
         this.streamUrl = streamUrl;
+    }
+
+    public List<String> getLanguages() {
+        return languages;
+    }
+
+    public void setLanguages(List<String> languages) {
+        this.languages = languages;
+    }
+
+    public List<String> getGenres() {
+        return genres;
+    }
+
+    public void setGenres(List<String> genres) {
+        this.genres = genres;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
     }
 }

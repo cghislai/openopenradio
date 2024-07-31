@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,18 +18,39 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+
+const val ROUTE_GENRES = "genres"
+const val ROUTE_COUNTRIES = "countries"
+const val ROUTE_LANGUAGES = "languages"
+const val ROUTE_STATIONS = "stations"
+const val PARAM_STATION_FILTER_TYPE = "filter_type"
+const val PARAM_STATION_FILTER_VALUE = "filter_value"
 
 @Composable
 fun Navigation() {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "menu") {
         composable("menu") { MenuScreen(navController) }
-        composable("genres") { GenresView(navController) }
-//        composable("content2") { ContentScreen2(navController) }
-//        composable("content3") { ContentScreen3(navController) }// Add more composable destinations as needed
+        composable(ROUTE_GENRES) { GenresView(navController) }
+        composable(ROUTE_COUNTRIES) { CountriesView(navController) }
+        composable(ROUTE_LANGUAGES) { LanguagesView(navController) }
+
+        composable(
+            "${ROUTE_STATIONS}/{${PARAM_STATION_FILTER_TYPE}}/{${PARAM_STATION_FILTER_VALUE}}",
+            arguments = listOf(
+                navArgument(PARAM_STATION_FILTER_TYPE) { type = NavType.StringType },
+                navArgument(PARAM_STATION_FILTER_VALUE) { type = NavType.StringType },
+            )
+        ) { navBackStackEntry ->
+            val filterTYpe = navBackStackEntry.arguments?.getString(PARAM_STATION_FILTER_TYPE)
+            val filterValue = navBackStackEntry.arguments?.getString(PARAM_STATION_FILTER_VALUE)
+            StationsView(navController, filterTYpe, filterValue)
+        }
     }
 }
 
@@ -39,11 +60,15 @@ fun MenuScreen(navController: NavController) {
     LazyColumn(modifier = Modifier.fillMaxWidth(1f)) {
         item {
             MenuItem(label = "Genres",
-                icon = Icons.Filled.Info,
-                onClick = { navController.navigate("genres") })
+                icon = Icons.Filled.Folder,
+                onClick = { navController.navigate(ROUTE_GENRES) })
+            MenuItem(label = "Countries",
+                icon = Icons.Filled.Folder,
+                onClick = { navController.navigate(ROUTE_COUNTRIES) })
+            MenuItem(label = "Languages",
+                icon = Icons.Filled.Folder,
+                onClick = { navController.navigate(ROUTE_LANGUAGES) })
         }
-//        item { MenuItem(label = "test2", onClick = { navController.navigate("content2") }) }
-//        item { MenuItem(label = "test3", onClick = { navController.navigate("content3") }) }
     }
 }
 

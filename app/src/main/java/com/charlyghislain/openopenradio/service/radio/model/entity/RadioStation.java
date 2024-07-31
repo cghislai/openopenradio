@@ -37,6 +37,8 @@ public class RadioStation {
     private List<String> genres;
     @ColumnInfo
     private String country;
+    @ColumnInfo
+    private String description;
 
 
     public RadioStation(@NonNull RadioSource source, @NonNull String sourceId) {
@@ -102,5 +104,13 @@ public class RadioStation {
 
     public void setCountry(String country) {
         this.country = country;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }

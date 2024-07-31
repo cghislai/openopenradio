@@ -6,6 +6,8 @@ import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 
+import com.charlyghislain.openopenradio.service.radio.model.GenreWithStats;
+import com.charlyghislain.openopenradio.service.radio.model.LanguageWithStats;
 import com.charlyghislain.openopenradio.service.radio.model.entity.RadioLanguage;
 import com.charlyghislain.openopenradio.service.radio.model.entity.RadioSource;
 
@@ -24,4 +26,11 @@ public interface RadioLanguageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void addLanguages(Collection<RadioLanguage> languages);
 
+    @Query("WITH LanguageWithStats AS (\n" +
+            "            SELECT g.name AS name,\n" +
+            "               (SELECT COUNT(*) FROM radio_station s WHERE LOWER(s.languages) LIKE '%' || LOWER(g.name) ||'%') AS stationCount\n" +
+            "    FROM radio_language g\n" +
+            "    )\n" +
+            "    SELECT name, stationCount FROM LanguageWithStats\n")
+    LiveData<List<LanguageWithStats>> getLanguageWithStats();
 }

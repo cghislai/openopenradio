@@ -4,14 +4,14 @@ import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
-import com.charlyghislain.openopenradio.ui.components.GenreList
+import com.charlyghislain.openopenradio.ui.components.CountryList
 
 
 @Composable
-fun GenresView(navController: NavController) {
+fun CountriesView(navController: NavController) {
     val context = LocalContext.current
 
-    GenreList(onClick = { genre ->
-        navController.navigate("${ROUTE_STATIONS}/${ROUTE_GENRES}/${genre}")
+    CountryList(onClick = { country ->
+        navController.navigate("${ROUTE_STATIONS}/${ROUTE_COUNTRIES}/${country}")
     })
 }

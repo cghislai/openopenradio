@@ -32,16 +32,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.LifecycleOwner
 import com.charlyghislain.openopenradio.service.radio.RadioService
-import com.charlyghislain.openopenradio.service.radio.model.GenreWithStats
+import com.charlyghislain.openopenradio.service.radio.model.CountryWithStats
 
 @Composable
-fun GenreList(
+fun CountryList(
     onClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val isServiceBound = remember { mutableStateOf(false) }
-    val genres = remember { mutableStateOf<List<GenreWithStats>>(emptyList()) }
+    val countrys = remember { mutableStateOf<List<CountryWithStats>>(emptyList()) }
     val radioService = remember { mutableStateOf<RadioService.IWebRadioService?>(null) }
 
     val serviceConnection = remember {
@@ -55,15 +55,15 @@ fun GenreList(
             override fun onServiceDisconnected(arg0: ComponentName) {
                 isServiceBound.value = false
                 radioService.value = null
-                genres.value = emptyList()
+                countrys.value = emptyList()
             }
         }
     }
 
     LaunchedEffect(key1 = isServiceBound.value) {
         if (isServiceBound.value) {
-            radioService.value?.genres?.observe(context as LifecycleOwner) { newGenres ->
-                genres.value = newGenres
+            radioService.value?.countries?.observe(context as LifecycleOwner) { newCountrys ->
+                countrys.value = newCountrys
             }
         }
     }
@@ -77,10 +77,10 @@ fun GenreList(
         }
     }
 
-    // Display the list of genres
     LazyColumn(modifier = modifier) {
-        items(genres.value) { genre ->
-            GenreItem(genreWithStats = genre, onGenreClick = { onClick(genre.name) })
+        items(countrys.value) { country ->
+            CountryItem(countryWithStats = country,
+                onCountryClick = { onClick(country.name) })
         }
     }
 
@@ -88,25 +88,25 @@ fun GenreList(
 
 
 @Composable
-fun GenreItem(genreWithStats: GenreWithStats, onGenreClick: () -> Unit) {
-    // Display genre information and handle click
+fun CountryItem(countryWithStats: CountryWithStats, onCountryClick: () -> Unit) {
+    // Display country information and handle click
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onGenreClick() }
+            .clickable { onCountryClick() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = Icons.Filled.Folder,
-            contentDescription = "Genre Folder",
+            contentDescription = "Country Folder",
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
         Column {
-            Text(text = genreWithStats.name, fontSize = 18.sp)
+            Text(text = countryWithStats.name, fontSize = 18.sp)
             Text(
-                text = "${genreWithStats.stationCount} stations",
+                text = "${countryWithStats.stationCount} stations",
                 fontSize = 12.sp
             )
         }

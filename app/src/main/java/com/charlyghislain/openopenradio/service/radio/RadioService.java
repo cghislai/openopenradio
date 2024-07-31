@@ -9,7 +9,9 @@ import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 
 import com.charlyghislain.openopenradio.service.radio.dao.RadioDatabase;
+import com.charlyghislain.openopenradio.service.radio.model.CountryWithStats;
 import com.charlyghislain.openopenradio.service.radio.model.GenreWithStats;
+import com.charlyghislain.openopenradio.service.radio.model.LanguageWithStats;
 import com.charlyghislain.openopenradio.service.radio.model.entity.RadioStation;
 import com.charlyghislain.openopenradio.service.radio.repository.CountryRepository;
 import com.charlyghislain.openopenradio.service.radio.repository.GenreRepository;
@@ -56,17 +58,28 @@ public class RadioService extends Service {
             return service.genreRepository.getGenreWithStats();
         }
 
-        public LiveData<List<String>> getCountries() {
-            return service.countryRepository.getCountrys();
+        public LiveData<List<CountryWithStats>> getCountries() {
+            return service.countryRepository.getCountryWithStats();
         }
 
-        public LiveData<List<String>> getLanguages() {
-            return service.languageRepository.getLanguages();
+        public LiveData<List<LanguageWithStats>> getLanguages() {
+            return service.languageRepository.getLanguageWithStats();
         }
 
         public LiveData<List<RadioStation>> getStations() {
             return service.stationRepository.getStations();
         }
 
+        public LiveData<List<RadioStation>> getStationsByGenre(String genre) {
+            return service.stationRepository.getStationsByGenre(genre);
+        }
+
+        public LiveData<List<RadioStation>> getStationsByCountry(String country) {
+            return service.stationRepository.getStationsByContry(country);
+        }
+
+        public LiveData<List<RadioStation>> getStationsByLanguage(String language) {
+            return service.stationRepository.getStationsByLanguage(language);
+        }
     }
 }

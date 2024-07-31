@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData;
 
 import com.charlyghislain.openopenradio.service.client.webradio.WebRadioClient;
 import com.charlyghislain.openopenradio.service.radio.dao.RadioCountryDao;
+import com.charlyghislain.openopenradio.service.radio.model.CountryWithStats;
 import com.charlyghislain.openopenradio.service.radio.model.entity.RadioCountry;
 import com.charlyghislain.openopenradio.service.radio.model.entity.RadioSource;
 import com.charlyghislain.openopenradio.service.util.RequestCallback;
@@ -22,9 +23,11 @@ public class CountryRepository {
     }
 
     public LiveData<List<String>> getCountrys() {
-        fetchCountries();
-
         return radioCountryDao.getAllCountryNames();
+    }
+
+    public LiveData<List<CountryWithStats>> getCountryWithStats() {
+        return radioCountryDao.getCountryWithStats();
     }
 
     public void fetchCountries() {

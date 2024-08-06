@@ -37,14 +37,16 @@ class OpenOpenRadioApplication : Application(), Configuration.Provider {
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val initialRequest = OneTimeWorkRequestBuilder<ContentFetchWorker>()
-            .setConstraints(constraints)
-            .build()
+        val initialRequest =
+            OneTimeWorkRequestBuilder<ContentFetchWorker>()
+                .setConstraints(constraints)
+                .build()
 
-        val periodicRequest = PeriodicWorkRequestBuilder<ContentFetchWorker>(
-            1, TimeUnit.DAYS // Adjust repeat interval as needed
-        ).setConstraints(constraints)
-            .build()
+        val periodicRequest =
+            PeriodicWorkRequestBuilder<ContentFetchWorker>(
+                1, TimeUnit.DAYS // Adjust repeat interval as needed
+            ).setConstraints(constraints)
+                .build()
 
 
         WorkManager.getInstance(this).enqueueUniqueWork(

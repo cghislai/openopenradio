@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Open open radio"
 include(":app")
+include(":openopenradioservice")

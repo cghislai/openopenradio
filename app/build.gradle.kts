@@ -65,8 +65,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.room.common)
-    implementation(libs.androidx.room.runtime)
+
     implementation(libs.androidx.runtime.livedata)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -77,8 +76,10 @@ dependencies {
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.material.icons.extended)
-    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
+    implementation(project(":openopenradioservice"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -87,14 +88,10 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    implementation(libs.gson)
-    implementation(libs.okhttp)
     implementation(libs.hilt)
 
-    annotationProcessor(libs.androidx.room.compiler)
     kapt(libs.hilt.compiler)
     kapt(libs.androidx.hilt.compiler)
-    kapt(libs.androidx.room.compiler)
 }
 
 // Allow references to generated code

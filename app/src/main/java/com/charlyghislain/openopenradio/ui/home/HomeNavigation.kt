@@ -41,14 +41,32 @@ import com.google.common.util.concurrent.MoreExecutors
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-const val ROUTE_MEDIA_ITEM = "mediaItem"
+private const val ROUTE_MEDIA_ITEM = "mediaItem"
+private const val ROOT_ROUTE = "root"
 
 @Composable
-fun Navigation(browser: MediaBrowser, controller: MediaController) {
+fun Navigation(
+    browser: MediaBrowser, controller: MediaController,
+    onBackNavigationAvailable: (Boolean) -> Unit,
+    onNavigateUp: (() -> Unit) -> Unit // Callback to handle navigation up
+) {
     val navController = rememberNavController()
+    var canNavigateBack by remember { mutableStateOf(false) }
 
-    NavHost(navController = navController, startDestination = "root") {
-        composable("root") { MenuRootScreen(navController, browser, controller) }
+    LaunchedEffect(navController) {
+        navController.currentBackStackEntryFlow.collect { entry ->
+            canNavigateBack = entry.destination.route != ROOT_ROUTE
+        }
+    }
+    LaunchedEffect(canNavigateBack) {
+        onBackNavigationAvailable(canNavigateBack)
+    }
+    LaunchedEffect(onNavigateUp) {
+        onNavigateUp({ navController.navigateUp() })
+    }
+
+    NavHost(navController = navController, startDestination = ROOT_ROUTE) {
+        composable(ROOT_ROUTE) { MenuRootScreen(navController, browser, controller) }
         composable(
             "${ROUTE_MEDIA_ITEM}/{mediaItemId}",
             arguments = listOf(navArgument("mediaItemId") { type = NavType.StringType })
@@ -96,7 +114,7 @@ fun MenuScreen(
 ) {
     val pager = remember {
         Pager<Int, MediaItem>(
-            config = PagingConfig(pageSize = 50),
+            config = PagingConfig(pageSize = 50, initialLoadSize = 50),
             pagingSourceFactory = { MediaItemPagingSource(browser, itemId) }
         )
     }
@@ -190,9 +208,12 @@ class MediaItemPagingSource(
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, MediaItem> {
         val pageToken = (params.key) ?: 0
+        val pageOffset = Math.floor((pageToken / params.loadSize).toDouble()).toInt()
 
-        val childrenFuture = browser.getChildren(parentId, pageToken, params.loadSize,
-            null)
+        val childrenFuture = browser.getChildren(
+            parentId, pageOffset, params.loadSize,
+            null
+        )
         return try {
             val childrenResults = suspendCoroutine { continuation ->
                 childrenFuture.addListener({
@@ -203,7 +224,7 @@ class MediaItemPagingSource(
             val items = childrenResults?.value ?: emptyList()
             var nextKey: Int? = pageToken + params.loadSize
             var prevKey: Int? = pageToken - params.loadSize
-            if (items.isEmpty()) {
+            if (items.size < params.loadSize) {
                 nextKey = null
             }
             if (pageToken == 0) {

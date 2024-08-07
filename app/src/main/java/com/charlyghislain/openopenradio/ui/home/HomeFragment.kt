@@ -2,6 +2,7 @@ package com.charlyghislain.openopenradio.ui.home
 
 import android.Manifest
 import android.content.ComponentName
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -26,29 +27,32 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
-import androidx.core.content.PermissionChecker
 import androidx.fragment.app.Fragment
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.MediaController
-import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionToken
 import com.charlyghislain.openopenradio.service.media.MediaPlaybackService
-import com.charlyghislain.openopenradio.ui.components.MediaControlOnly
 import com.charlyghislain.openopenradio.ui.components.MyPlayerView
-import com.charlyghislain.openopenradio.ui.components.RadioController
 import com.charlyghislain.openopenradio.ui.theme.OpenOpenRadioTheme
+import com.google.common.util.concurrent.Futures.immediateFuture
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 
 class HomeFragment : Fragment() {
 
-    private lateinit var browserFuture: ListenableFuture<MediaBrowser>
-    private lateinit var controllerFuture: ListenableFuture<MediaController>
     private lateinit var sessionToken: SessionToken
+    private lateinit var backNavigationListener: BackNavigationListener
+
+    private var controllerFuture by mutableStateOf<ListenableFuture<MediaController>>(
+        immediateFuture(null)
+    )
+    private var browserFuture by mutableStateOf<ListenableFuture<MediaBrowser>>(immediateFuture(null))
 
     override fun onStart() {
         super.onStart()
         val context = requireContext();
+        sessionToken =
+            SessionToken(context, ComponentName(context, MediaPlaybackService::class.java))
 
         if (
             Build.VERSION.SDK_INT >= 33 &&
@@ -65,23 +69,29 @@ class HomeFragment : Fragment() {
 
     override fun onStop() {
         super.onStop()
-        MediaController.releaseFuture(controllerFuture)
     }
 
     override fun onResume() {
         super.onResume()
-
         val context = requireContext();
-        sessionToken =
-            SessionToken(context, ComponentName(context, MediaPlaybackService::class.java))
-
         controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
         browserFuture = MediaBrowser.Builder(context, sessionToken).buildAsync()
-
     }
 
     override fun onPause() {
         super.onPause()
+        MediaController.releaseFuture(controllerFuture)
+        MediaBrowser.releaseFuture(browserFuture)
+    }
+
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        if (context is BackNavigationListener) {
+            backNavigationListener = context
+        } else {
+            throw RuntimeException("$context must implement BackNavigationListener")
+        }
     }
 
 
@@ -94,18 +104,32 @@ class HomeFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 OpenOpenRadioTheme {
-                    HomePageContent(controllerFuture, browserFuture) // Your Composable function
+                    HomePageContent(
+                        controllerFuture,
+                        browserFuture,
+                        onBackNavigationAvailable = { a ->
+                            backNavigationListener.onBackNavigationAvailable(
+                                a
+                            )
+                        },
+                        onNavigateUp = { callback ->
+                            backNavigationListener.onNavigateUpCallback(callback) // Assign the callback
+                        }
+                    )
                 }
             }
         }
     }
+
 }
 
 
 @Composable
 fun HomePageContent(
     controllerFuture: ListenableFuture<MediaController>,
-    browserFuture: ListenableFuture<MediaBrowser>
+    browserFuture: ListenableFuture<MediaBrowser>,
+    onBackNavigationAvailable: (Boolean) -> Unit,
+    onNavigateUp: (() -> Unit) -> Unit // Callback to handle navigation up
 ) {
     var controller: MediaController? by remember { mutableStateOf(null) }
     var browser: MediaBrowser? by remember { mutableStateOf(null) }
@@ -144,7 +168,9 @@ fun HomePageContent(
             browser?.let { mediaBrowser ->
                 Navigation(
                     browser = mediaBrowser,
-                    controller = mediaController
+                    controller = mediaController,
+                    onBackNavigationAvailable = onBackNavigationAvailable,
+                    onNavigateUp = { callback -> onNavigateUp(callback) }
                 )
             }
         }
@@ -152,3 +178,8 @@ fun HomePageContent(
     }
 }
 
+interface BackNavigationListener {
+    fun onBackNavigationAvailable(available: Boolean)
+
+    fun onNavigateUpCallback(callback: () -> Unit)
+}

@@ -12,11 +12,15 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AppCompatActivity
 import com.charlyghislain.openopenradio.databinding.ActivityOpenOpenRadioMainBinding
+import com.charlyghislain.openopenradio.ui.home.BackNavigationListener
 
-class OpenOpenRadioMain : AppCompatActivity() {
+class OpenOpenRadioMain : AppCompatActivity(), BackNavigationListener {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityOpenOpenRadioMainBinding
+
+    // Callback set once navigation component is set up
+    private var onNavigateUpCallback: (() -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,27 +29,20 @@ class OpenOpenRadioMain : AppCompatActivity() {
         setContentView(binding.root)
 
         setSupportActionBar(binding.appBarOpenOpenRadioMain.toolbar)
-
-        binding.appBarOpenOpenRadioMain.fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null)
-                .setAnchorView(R.id.fab).show()
-        }
+        supportActionBar?.setDisplayShowHomeEnabled(false)
 
         val drawerLayout: DrawerLayout = binding.drawerLayout
-        val navView: NavigationView = binding.navView
-        val navController = findNavController(R.id.nav_host_fragment_content_open_open_radio_main)
+//        val navView: NavigationView = binding.navView
+//        val navController = findNavController(R.id.nav_host_fragment_content_open_open_radio_main)
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         appBarConfiguration = AppBarConfiguration(
             setOf(
-                R.id.nav_home, R.id.nav_gallery, R.id.nav_slideshow
+                R.id.nav_home,
             ), drawerLayout
         )
-        setupActionBarWithNavController(navController, appBarConfiguration)
-        navView.setupWithNavController(navController)
-
-
+//        setupActionBarWithNavController(navController, appBarConfiguration)
+//        navView.setupWithNavController(navController)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -55,7 +52,25 @@ class OpenOpenRadioMain : AppCompatActivity() {
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        val navController = findNavController(R.id.nav_host_fragment_content_open_open_radio_main)
-        return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
+        onNavigateUpCallback?.invoke() ?: return false
+        return true;
+
+//        return super.onSupportNavigateUp()
+//        val navController = findNavController(R.id.nav_host_fragment_content_open_open_radio_main)
+//        return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
+    }
+
+    override fun onNavigateUp(): Boolean {
+        onNavigateUpCallback?.invoke() ?: return false
+        return true
+    }
+
+    override fun onNavigateUpCallback(callback: () -> Unit) {
+        onNavigateUpCallback = callback
+    }
+
+    override fun onBackNavigationAvailable(available: Boolean) {
+        supportActionBar?.setDisplayShowHomeEnabled(available)
+        supportActionBar?.setDisplayHomeAsUpEnabled(available)
     }
 }

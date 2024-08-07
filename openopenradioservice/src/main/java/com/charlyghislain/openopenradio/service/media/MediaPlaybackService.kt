@@ -200,32 +200,6 @@ class MediaPlaybackService : MediaSessionService() {
 
 @UnstableApi
 class PlayerListener(val player: ExoPlayer) : Player.Listener {
-    private var currentPlaylistUri: String? = null
-
-    @OptIn(UnstableApi::class)
-    val dataSourceFactory: DataSource.Factory = DefaultHttpDataSource.Factory()
-        .setAllowCrossProtocolRedirects(true)
-
-    val playlistParserFactory: HlsPlaylistParserFactory = PlaylistParserFactory()
-
-//    @OptIn(UnstableApi::class)
-//    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-//        val newPlaylistUri = mediaItem?.localConfiguration?.uri.toString()
-//
-//        if (newPlaylistUri.endsWith(".m3u", ignoreCase = true)
-//            && newPlaylistUri != currentPlaylistUri
-//        ) {
-//            currentPlaylistUri = newPlaylistUri
-//            val hlsMediaSource = HlsMediaSource.Factory(dataSourceFactory)
-//                .setPlaylistParserFactory(playlistParserFactory)
-//                .createMediaSource(mediaItem!!)
-//            player.setMediaSource(hlsMediaSource)
-//            player.prepare()
-//        } else {
-//            currentPlaylistUri = null
-//            super.onMediaItemTransition(mediaItem, reason)
-//        }
-//    }
 
     override fun onPlayerError(error: PlaybackException) {
         if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
@@ -235,21 +209,6 @@ class PlayerListener(val player: ExoPlayer) : Player.Listener {
         } else {
             super.onPlayerError(error)
         }
-
     }
 }
 
-@UnstableApi
-class PlaylistParserFactory : HlsPlaylistParserFactory {
-    override fun createPlaylistParser(): ParsingLoadable.Parser<HlsPlaylist> {
-        return WorkaroundHlsPlaylistParser()
-    }
-
-    override fun createPlaylistParser(
-        multivariantPlaylist: HlsMultivariantPlaylist,
-        previousMediaPlaylist: HlsMediaPlaylist?
-    ): ParsingLoadable.Parser<HlsPlaylist> {
-        return WorkaroundHlsPlaylistParser(multivariantPlaylist, previousMediaPlaylist)
-    }
-
-}

@@ -47,6 +47,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
 import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.util.UnstableApi
@@ -159,12 +160,16 @@ fun MyPlayerView(
     var mediaPlaying: Boolean? by remember {
         mutableStateOf(controller.isPlaying)
     }
+    var mediaStatus: String? by remember {
+        mutableStateOf(getPlayerStatus(controller))
+    }
     player.addListener(
         ControllerPlayerListener(
             { item ->
                 coroutineScope.launch { // Launch a coroutine
                     mediaItem = controller.currentMediaItem
-                    mediaPlaying = controller.isPlaying // Update state within coroutine
+                    mediaPlaying = controller.isPlaying
+                    mediaStatus = getPlayerStatus(controller)
                 }
             }, player
         )
@@ -250,6 +255,7 @@ fun MyPlayerView(
                                 modifier = Modifier
                                     .padding(8.dp)
                                     .fillMaxWidth(),
+                                softWrap = false,
                                 style = TextStyle(
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 24.sp,
@@ -284,6 +290,25 @@ fun MyPlayerView(
                                 )
                             }
 
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.aligned(Alignment.End)
+                            ) {
+                                mediaStatus?.let { status ->
+                                    Text(
+                                        text = status,
+                                        color = state.foregroundColor,
+                                        modifier = Modifier
+                                            .padding(8.dp),
+                                        style = TextStyle(
+                                            fontSize = 14.sp,
+                                            background = state.backgroundColor.copy(alpha = 0.8f)
+                                        ),
+                                    )
+                                }
+                            }
+
                         }
 
                     }
@@ -301,6 +326,31 @@ fun MyPlayerView(
     } ?: run {
         CircularProgressIndicator()
     }
+}
+
+fun getPlayerStatus(controller: MediaController): String? {
+    val connected = controller.isConnected
+    if (!connected) {
+        return "Disconnected"
+    }
+
+    val error = controller.playerError
+    if (error != null) {
+        return "Error: ${error.message}"
+    }
+
+    val mediaItem = controller.currentMediaItem ?: return "Stopped"
+    val bufferSize = controller.totalBufferedDuration
+    if (bufferSize < 100) {
+        return "Buffering"
+    }
+    val playing = controller.isPlaying
+    if (!playing) {
+        return "Paused"
+    }
+
+
+    return "Playing"
 }
 
 @Composable
@@ -359,6 +409,11 @@ class ControllerPlayerListener(
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         super.onIsPlayingChanged(isPlaying)
+        callback.invoke(player.currentMediaItem)
+    }
+
+    override fun onPlayerError(error: PlaybackException) {
+        super.onPlayerError(error)
         callback.invoke(player.currentMediaItem)
     }
 }

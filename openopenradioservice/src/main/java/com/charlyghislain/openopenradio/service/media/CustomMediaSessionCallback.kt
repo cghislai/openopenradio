@@ -1,20 +1,29 @@
 package com.charlyghislain.openopenradio.service.media
 
-import android.os.Bundle
+import androidx.annotation.OptIn
+import androidx.lifecycle.map
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Rating
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.session.CommandButton
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaLibraryService
+import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
-import androidx.media3.session.SessionCommand
+import androidx.media3.session.MediaSession.MediaItemsWithStartPosition
 import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
+import java.util.concurrent.Callable
+import java.util.stream.Collectors
 
-private const val COMMAND_SAVE_TO_FAVORITES = "SAVE_TO_FAVORITES"
-private const val COMMAND_REMOVE_FROM_FAVORITES = "REMOVE_TO_FAVORITES"
 
-class CustomMediaSessionCallback(val service: MediaPlaybackService) : MediaSession.Callback {
+class CustomMediaSessionCallback(val service: MediaPlaybackService) : MediaLibrarySession.Callback {
+
 
     // Configure commands available to the controller in onConnect()
     @androidx.annotation.OptIn(UnstableApi::class)
@@ -22,66 +31,165 @@ class CustomMediaSessionCallback(val service: MediaPlaybackService) : MediaSessi
         session: MediaSession,
         controller: MediaSession.ControllerInfo
     ): MediaSession.ConnectionResult {
-        val sessionCommands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
-            .add(SessionCommand(COMMAND_SAVE_TO_FAVORITES, Bundle.EMPTY))
-            .add(SessionCommand(COMMAND_REMOVE_FROM_FAVORITES, Bundle.EMPTY))
-            .build()
-        return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
-            .setAvailableSessionCommands(sessionCommands)
-            .build()
+//        val sessionCommands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
+//            .build()
+//
+//        return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+//            .setAvailableSessionCommands(sessionCommands)
+//            .build()
+        return super.onConnect(session, controller)
     }
 
-    override fun onCustomCommand(
+    override fun onSetRating(
         session: MediaSession,
         controller: MediaSession.ControllerInfo,
-        customCommand: SessionCommand,
-        args: Bundle
+        rating: Rating
     ): ListenableFuture<SessionResult> {
-        if (customCommand.customAction == COMMAND_SAVE_TO_FAVORITES) {
-            // Do custom logic here
-            saveToFavorites(session.player.currentMediaItem)
-            return Futures.immediateFuture(
-                SessionResult(SessionResult.RESULT_SUCCESS)
-            )
-        } else if (customCommand.customAction == COMMAND_REMOVE_FROM_FAVORITES) {
-            removeFromFavorites(session.player.currentMediaItem)
-            return Futures.immediateFuture(
-                SessionResult(SessionResult.RESULT_SUCCESS)
-            )
-        } else {
-            return Futures.immediateCancelledFuture();
-        }
+        val item = session.player.currentMediaItem;
+        return super.onSetRating(session, controller, rating)
     }
 
-
-    private fun saveToFavorites(currentMediaItem: MediaItem?) {
-        TODO("Not yet implemented")
-        updateFavoriteLayout(true)
+    override fun onSetRating(
+        session: MediaSession,
+        controller: MediaSession.ControllerInfo,
+        mediaId: String,
+        rating: Rating
+    ): ListenableFuture<SessionResult> {
+        return super.onSetRating(session, controller, mediaId, rating)
     }
 
-    private fun removeFromFavorites(currentMediaItem: MediaItem?) {
-        TODO("Not yet implemented")
-        updateFavoriteLayout(false)
+    override fun onGetLibraryRoot(
+        session: MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        params: MediaLibraryService.LibraryParams?
+    ): ListenableFuture<LibraryResult<MediaItem>> {
+        val item = service.treeService.getRootItem()
+        return Futures.immediateFuture(
+            LibraryResult.ofItem(item, params)
+        );
+    }
+
+    override fun onGetItem(
+        session: MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        mediaId: String
+    ): ListenableFuture<LibraryResult<MediaItem>> {
+        val item = service.treeService.getItemById(mediaId)
+        return Futures.transform(
+            item, { i -> LibraryResult.ofItem(i, null) },
+            MoreExecutors.directExecutor()
+        )
+    }
+
+    override fun onGetChildren(
+        session: MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        parentId: String,
+        page: Int,
+        pageSize: Int,
+        params: MediaLibraryService.LibraryParams?
+    ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+        val future = service.treeService.getChildren(parentId, params, page, pageSize)
+        return Futures.transform(
+            future, { list -> LibraryResult.ofItemList(list, params) },
+            MoreExecutors.directExecutor()
+        )
+    }
+
+    override fun onAddMediaItems(
+        mediaSession: MediaSession,
+        controller: MediaSession.ControllerInfo,
+        mediaItems: MutableList<MediaItem>
+    ): ListenableFuture<List<MediaItem>> {
+        return resolveMediaItems(mediaItems)
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
-    private fun updateFavoriteLayout(savedToFavorite: Boolean) {
-        if (savedToFavorite) {
-            val favoriteButton = CommandButton.Builder()
-                .setDisplayName("Remove from favorites")
-                .setCustomIconResId(androidx.media3.session.R.drawable.media3_icon_heart_filled)
-                .setSessionCommand(SessionCommand(COMMAND_REMOVE_FROM_FAVORITES, Bundle()))
-                .build()
-            service.mediaSession?.setCustomLayout(ImmutableList.of(favoriteButton))
-        } else {
-            val favoriteButton = CommandButton.Builder()
-                .setDisplayName("Save to favorites")
-                .setCustomIconResId(androidx.media3.session.R.drawable.media3_icon_heart_unfilled)
-                .setSessionCommand(SessionCommand(COMMAND_SAVE_TO_FAVORITES, Bundle()))
-                .build()
-            service.mediaSession?.setCustomLayout(ImmutableList.of(favoriteButton))
-        }
+    override fun onSetMediaItems(
+        mediaSession: MediaSession,
+        browser: MediaSession.ControllerInfo,
+        mediaItems: List<MediaItem>,
+        startIndex: Int,
+        startPositionMs: Long,
+    ): ListenableFuture<MediaItemsWithStartPosition> {
+        val future = resolveMediaItems(mediaItems);
+        return Futures.transform(
+            future, { list -> MediaItemsWithStartPosition(list, startIndex, startPositionMs) },
+            MoreExecutors.directExecutor()
+        )
     }
 
 
+    @androidx.annotation.OptIn(UnstableApi::class)
+    override fun onPlaybackResumption(
+        mediaSession: MediaSession,
+        controller: MediaSession.ControllerInfo
+    ): ListenableFuture<MediaItemsWithStartPosition> {
+        val currentItem = mediaSession.player.currentMediaItem
+        val currentPosition = mediaSession.player.currentPosition
+        return Futures.immediateFuture(
+            MediaItemsWithStartPosition(
+                listOfNotNull(currentItem),
+                0,
+                currentPosition
+            )
+        )
+    }
+
+    override fun onSearch(
+        session: MediaLibraryService.MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        query: String,
+        params: MediaLibraryService.LibraryParams?,
+    ): ListenableFuture<LibraryResult<Void>> {
+        return service.treeService.countSearchResults(query)
+            .map { c ->
+                session.notifySearchResultChanged(browser, query, c, params)
+                return@map LibraryResult.ofVoid(params)
+            }.asListenableFuture()
+    }
+
+    override fun onGetSearchResult(
+        session: MediaLibraryService.MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        query: String,
+        page: Int,
+        pageSize: Int,
+        params: MediaLibraryService.LibraryParams?,
+    ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+        return service.treeService.getSearchResults(query, page, pageSize)
+            .map { r -> LibraryResult.ofItemList(r, params) }
+            .asListenableFuture()
+    }
+
+    private fun resolveMediaItems(mediaItems: List<MediaItem>): ListenableFuture<List<MediaItem>> {
+        val futureList: MutableList<ListenableFuture<List<MediaItem>>> = mutableListOf()
+        mediaItems.forEach { mediaItem ->
+            if (mediaItem.mediaId.isNotEmpty()) {
+                val future = service.treeService.expandItem(mediaItem)
+                futureList.add(
+                    Futures.transform(
+                        future, { i -> listOfNotNull(i) },
+                        MoreExecutors.directExecutor()
+                    )
+                )
+            } else if (mediaItem.requestMetadata.searchQuery != null) {
+                futureList.add(
+                    service.treeService.search(mediaItem.requestMetadata.searchQuery!!)
+                )
+            }
+        }
+
+        return Futures.transform(
+            Futures.allAsList(futureList),
+            { lists ->
+                val items =
+                    lists.stream()
+                        .flatMap { list -> list.stream() }
+                        .collect(Collectors.toList())
+                return@transform items
+            },
+            MoreExecutors.directExecutor()
+        )
+    }
 }

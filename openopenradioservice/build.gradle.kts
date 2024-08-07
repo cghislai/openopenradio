@@ -38,16 +38,20 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.media3.exoplayer.hls)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
+    implementation(libs.androidx.media3.exoplayer.hls) // HLS extension
+
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)
     implementation(libs.androidx.room.common)
     implementation(libs.androidx.room.runtime)
+    implementation(libs.guava)
 
     implementation(libs.gson)
     implementation(libs.okhttp)

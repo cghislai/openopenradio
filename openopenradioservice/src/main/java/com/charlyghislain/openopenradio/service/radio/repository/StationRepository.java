@@ -26,6 +26,10 @@ public class StationRepository {
         return radioStationDao.getAllStations();
     }
 
+    public LiveData<List<RadioStation>> getStationsPage(int offset, int length) {
+        return radioStationDao.getAllStationsPage(offset, length);
+    }
+
     public LiveData<List<RadioStation>> getStationsByGenre(String genre) {
         return radioStationDao.getStationsByGenre(genre);
     }
@@ -36,6 +40,22 @@ public class StationRepository {
 
     public LiveData<List<RadioStation>> getStationsByLanguage(String language) {
         return radioStationDao.getStationsByLanguage(language);
+    }
+
+    public LiveData<RadioStation> findStationById(RadioSource source, String sourceId) {
+        return radioStationDao.findStationById(source, sourceId);
+    }
+
+    public LiveData<List<RadioStation>> searchStations(String query) {
+        return radioStationDao.searchStations(query);
+    }
+
+    public LiveData<Integer> countStationsSearch(String query) {
+        return radioStationDao.countStationsSearch(query);
+    }
+
+    public LiveData<List<RadioStation>> getStationsSearch(String query, int offset, int lenght) {
+        return radioStationDao.getStationsSearch(query, offset, lenght);
     }
 
     public void fetchStations() {

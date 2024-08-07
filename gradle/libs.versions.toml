@@ -1,5 +1,7 @@
 [versions]
 agp = "8.5.1"
+coilCompose = "2.5.0"
+guava = "33.0.0-android"
 kotlin = "1.9.23"
 coreKtx = "1.13.1"
 junit = "4.13.2"
@@ -10,6 +12,8 @@ activityCompose = "1.9.1"
 composeBom = "2024.06.00"
 gson = "2.11.0"
 okhttp = "4.12.0"
+pagingCompose = "3.3.1"
+paletteKtx = "1.0.0"
 roomCommon = "2.6.1"
 hilt = "2.51.1"
 roomRuntime = "2.6.1"
@@ -29,9 +33,15 @@ hiltWork = "1.2.0"
 hiltCompiler = "1.2.0"
 media3Exoplayer = "1.4.0"
 media3Session = "1.4.0"
+media3Ui = "1.4.0"
+media3ExoplayerHls = "1.4.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-paging-compose = { module = "androidx.paging:paging-compose", version.ref = "pagingCompose" }
+androidx-palette-ktx = { module = "androidx.palette:palette-ktx", version.ref = "paletteKtx" }
+coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -68,6 +78,8 @@ androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref 
 androidx-hilt-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltCompiler" }
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3Exoplayer" }
 androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3Session" }
+androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3Ui" }
+androidx-media3-exoplayer-hls = { group = "androidx.media3", name = "media3-exoplayer-hls", version.ref = "media3ExoplayerHls" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

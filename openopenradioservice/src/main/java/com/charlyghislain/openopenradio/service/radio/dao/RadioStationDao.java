@@ -21,8 +21,11 @@ public interface RadioStationDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void addStations(Collection<RadioStation> stations);
 
-    @Query("SELECT * FROM radio_station")
+    @Query("SELECT * FROM radio_station ORDER BY name ASC")
     LiveData<List<RadioStation>> getAllStations();
+
+    @Query("SELECT * FROM radio_station ORDER BY name ASC LIMIT :offset,:length")
+    LiveData<List<RadioStation>> getAllStationsPage(int offset, int length);
 
     @Query("SELECT count(*) FROM radio_station WHERE genres LIKE '%' || :genre || '%'")
     int countStationsByGenre(String genre);
@@ -42,4 +45,32 @@ public interface RadioStationDao {
     @Query("SELECT * FROM radio_station WHERE country = :country")
     LiveData<List<RadioStation>> getStationsByCountry(String country);
 
+    @Query("SELECT * FROM radio_station WHERE source = :source AND sourceId = :sourceId")
+    LiveData<RadioStation> findStationById(RadioSource source, String sourceId);
+
+    @Query("SELECT * FROM radio_station " +
+            "WHERE genres LIKE '%' || :query || '%'" +
+            "OR languages LIKE '%' || :query || '%'" +
+            "OR country LIKE '%' || :query || '%'" +
+            "OR name LIKE '%' || :query || '%'" +
+            "OR description LIKE '%' || :query || '%'" +
+            "ORDER BY name ASC LIMIT 0,100")
+    LiveData<List<RadioStation>> searchStations(String query);
+
+    @Query("SELECT count(*) FROM radio_station " +
+            "WHERE genres LIKE '%' || :query || '%'" +
+            "OR languages LIKE '%' || :query || '%'" +
+            "OR country LIKE '%' || :query || '%'" +
+            "OR name LIKE '%' || :query || '%'" +
+            "OR description LIKE '%' || :query || '%'")
+    LiveData<Integer> countStationsSearch(String query);
+
+    @Query("SELECT * FROM radio_station " +
+            "WHERE genres LIKE '%' || :query || '%'" +
+            "OR languages LIKE '%' || :query || '%'" +
+            "OR country LIKE '%' || :query || '%'" +
+            "OR name LIKE '%' || :query || '%'" +
+            "OR description LIKE '%' || :query || '%'" +
+            "ORDER BY name ASC LIMIT :offset,:length")
+    LiveData<List<RadioStation>> getStationsSearch(String query, int offset, int length);
 }

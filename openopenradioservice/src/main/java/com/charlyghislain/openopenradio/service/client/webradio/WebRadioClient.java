@@ -23,6 +23,8 @@ import okhttp3.Response;
 public class WebRadioClient {
     // https://github.com/jcorporation/webradiodb?tab=readme-ov-file
     private final String baseUri = "https://jcorporation.github.io/webradiodb/db/index";
+    private final String picturesBaseUri = "https://jcorporation.github.io/webradiodb/db/pics/";
+    private final String radiosBaseUri = "https://jcorporation.github.io/webradiodb/db/webradios/";
     private final String bitratesPath = "/bitrates.min.json";
     private final String codecsPath = "/codecs.min.json";
     private final String countriesPath = "/countries.min.json";
@@ -158,7 +160,12 @@ public class WebRadioClient {
                             .map(e -> {
                                 String stationId = e.getKey();
                                 WebRadioStation station = e.getValue();
+                                String streamUri = station.getStreamUri();
+                                String imageUri = station.getImage();
+
                                 station.setId(stationId);
+//                                station.setStreamUri(radiosBaseUri + stationId);
+                                station.setImage(picturesBaseUri + imageUri);
                                 return station;
                             })
                             .collect(Collectors.toList());

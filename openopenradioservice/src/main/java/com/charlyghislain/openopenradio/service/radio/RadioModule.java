@@ -10,9 +10,11 @@ import com.charlyghislain.openopenradio.service.radio.dao.RadioLanguageDao;
 import com.charlyghislain.openopenradio.service.client.webradio.WebRadioClient;
 import com.charlyghislain.openopenradio.service.radio.dao.RadioGenreDao;
 import com.charlyghislain.openopenradio.service.radio.dao.RadioStationDao;
+import com.charlyghislain.openopenradio.service.radio.dao.RadioStationFavoriteDao;
 import com.charlyghislain.openopenradio.service.radio.repository.CountryRepository;
 import com.charlyghislain.openopenradio.service.radio.repository.GenreRepository;
 import com.charlyghislain.openopenradio.service.radio.repository.LanguageRepository;
+import com.charlyghislain.openopenradio.service.radio.repository.StationFavoritesRepository;
 import com.charlyghislain.openopenradio.service.radio.repository.StationRepository;
 
 import javax.inject.Singleton;
@@ -54,6 +56,12 @@ public class RadioModule {
 
     @Provides
     @Singleton
+    RadioStationFavoriteDao provideRadioStationFavoriteDao(RadioDatabase radioDatabase) {
+        return radioDatabase.radioStationFavoriteDao();
+    }
+
+    @Provides
+    @Singleton
     RadioStationDao provideRadioStationDao(RadioDatabase radioDatabase) {
         return radioDatabase.radioStationDao();
     }
@@ -76,10 +84,18 @@ public class RadioModule {
         return new LanguageRepository(webRadioClient, radioLanguageDao);
     }
 
+
     @Provides
     @Singleton
-    StationRepository provideStationsRepository(WebRadioClient webRadioClient, RadioStationDao radioStationsDao) {
-        return new StationRepository(webRadioClient, radioStationsDao);
+    StationFavoritesRepository provideStationFavoritesRepository(WebRadioClient webRadioClient, RadioStationFavoriteDao radioStationsDaoFavoriteDao) {
+        return new StationFavoritesRepository(webRadioClient, radioStationsDaoFavoriteDao);
     }
 
+    @Provides
+    @Singleton
+    StationRepository provideStationsRepository(WebRadioClient webRadioClient,
+                                                RadioStationDao radioStationsDao,
+                                                RadioStationFavoriteDao radioStationFavoriteDao) {
+        return new StationRepository(webRadioClient, radioStationsDao, radioStationFavoriteDao);
+    }
 }

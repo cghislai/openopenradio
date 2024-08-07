@@ -51,8 +51,9 @@ dependencies {
     implementation(libs.androidx.hilt.work)
     implementation(libs.androidx.room.common)
     implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
     implementation(libs.guava)
-
+    implementation(libs.lifecycle.process)
     implementation(libs.gson)
     implementation(libs.okhttp)
     implementation(libs.hilt)

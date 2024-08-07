@@ -12,28 +12,24 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
-import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultHttpDataSource
-import androidx.media3.datasource.HttpEngineDataSource
 import androidx.media3.exoplayer.DefaultLivePlaybackSpeedControl
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.hls.HlsMediaSource
-import androidx.media3.exoplayer.hls.playlist.HlsMediaPlaylist
-import androidx.media3.exoplayer.hls.playlist.HlsMultivariantPlaylist
-import androidx.media3.exoplayer.hls.playlist.HlsPlaylist
-import androidx.media3.exoplayer.hls.playlist.HlsPlaylistParser
-import androidx.media3.exoplayer.hls.playlist.HlsPlaylistParserFactory
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.exoplayer.upstream.ParsingLoadable
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.session.SessionResult
 import com.charlyghislain.openopenradio.service.R
+import com.charlyghislain.openopenradio.service.radio.repository.StationFavoritesRepository
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import dagger.hilt.android.AndroidEntryPoint
+import java.util.concurrent.CompletableFuture
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -74,6 +70,9 @@ class MediaPlaybackService : MediaSessionService() {
 
     @Inject
     lateinit var treeService: MediaTreeService;
+
+    @Inject
+    lateinit var favoritesRepository: StationFavoritesRepository;
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
@@ -194,6 +193,30 @@ class MediaPlaybackService : MediaSessionService() {
                 NotificationManager.IMPORTANCE_DEFAULT,
             )
         notificationManagerCompat.createNotificationChannel(channel)
+    }
+
+    fun setFavorite(mediaId: String?, heart: Boolean): ListenableFuture<SessionResult> {
+        val settableFuture = SettableFuture.create<SessionResult>()
+
+        if (mediaId != null) {
+            val stationId = StationId.parseString(mediaId)
+            val dbOperationFuture: CompletableFuture<Void?> =
+                if (heart) {
+                    favoritesRepository.addFavorite(stationId.source, stationId.sourceId)
+                } else {
+                    favoritesRepository.removeFavorite(stationId.source, stationId.sourceId)
+                }
+            dbOperationFuture.whenComplete { _, throwable ->
+                if (throwable != null) {
+                    settableFuture.setException(throwable)
+                } else {
+                    settableFuture.set(SessionResult(SessionResult.RESULT_SUCCESS))
+                }
+            }
+        } else {
+            settableFuture.set(SessionResult(SessionResult.RESULT_SUCCESS))
+        }
+        return settableFuture
     }
 
 }

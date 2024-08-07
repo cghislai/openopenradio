@@ -4,16 +4,17 @@ import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.map
+import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Rating
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaLibraryService
-import com.charlyghislain.openopenradio.service.radio.model.entity.RadioSource
-import com.charlyghislain.openopenradio.service.radio.model.entity.RadioStation
+import com.charlyghislain.openopenradio.service.radio.model.RatedStation
 import com.charlyghislain.openopenradio.service.radio.repository.CountryRepository
 import com.charlyghislain.openopenradio.service.radio.repository.GenreRepository
 import com.charlyghislain.openopenradio.service.radio.repository.LanguageRepository
+import com.charlyghislain.openopenradio.service.radio.repository.StationFavoritesRepository
 import com.charlyghislain.openopenradio.service.radio.repository.StationRepository
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -24,7 +25,8 @@ class MediaTreeService(
     val countryRepository: CountryRepository,
     val genreRepository: GenreRepository,
     val languageRepository: LanguageRepository,
-    val stationRepository: StationRepository
+    val stationRepository: StationRepository,
+    val favoriteRepository: StationFavoritesRepository
 ) {
 
     companion object {
@@ -52,7 +54,8 @@ class MediaTreeService(
 
         return Futures.transform(fullItemFuture, { fullItem ->
             @OptIn(UnstableApi::class) // MediaMetadata.populate
-            val metadata = fullItem.mediaMetadata.buildUpon().populate(fullItem.mediaMetadata).build()
+            val metadata =
+                fullItem.mediaMetadata.buildUpon().populate(fullItem.mediaMetadata).build()
             fullItem
                 .buildUpon()
                 .setMediaMetadata(metadata)
@@ -121,7 +124,9 @@ class MediaTreeService(
                 .map { list -> list.map { g -> buildLanguageItem(g) } }
                 .asListenableFuture()
         } else if (parentId == FAVORITES_ID) {
-            // TODO(implement)
+            return stationRepository.allStationsFavorites
+                .map { list -> list.map { g -> buildStationItem(g) } }
+                .asListenableFuture()
         } else if (parentId == ALL_ID) {
             return stationRepository.getStationsPage(pageOffset, pageSize)
                 .map { list -> list.map { g -> buildStationItem(g) } }
@@ -147,7 +152,6 @@ class MediaTreeService(
         } else {
             return Futures.immediateFuture(listOf())
         }
-        return TODO("Provide the return value")
     }
 
     fun getItemById(id: String): ListenableFuture<MediaItem> {
@@ -203,9 +207,13 @@ class MediaTreeService(
     }
 
     private fun buildStationItem(
-        station: RadioStation,
+        ratedStation: RatedStation,
     ): MediaItem {
+        val station = ratedStation.station;
+        val fav = ratedStation.favorite;
         val stationId = StationId(station.source, station.sourceId)
+        val rating: Rating = HeartRating(fav)
+
         return buildMediaItem(
             station.name,
             stationId.toString(),
@@ -216,6 +224,7 @@ class MediaTreeService(
             sourceUri = Uri.parse(station.streamUrl),
             imageUri = Uri.parse(station.logoUri),
             descrition = station.description,
+            userRating = rating
         )
     }
 
@@ -348,7 +357,7 @@ class MediaTreeService(
                 .setArtworkUri(imageUri)
                 .setMediaType(mediaType)
                 .setDescription(descrition)
-                .setUserRating(userRating)
+                .setUserRating(userRating ?: HeartRating(false))
                 .build()
 
         val item = MediaItem.Builder()
@@ -362,15 +371,6 @@ class MediaTreeService(
 
     private class MediaItemNode(var item: MediaItem) {
         val searchTitle = normalizeSearchText(item.mediaMetadata.title)
-        val searchText =
-            StringBuilder()
-                .append(searchTitle)
-                .append(" ")
-                .append(normalizeSearchText(item.mediaMetadata.description))
-                .append(" ")
-                .append(normalizeSearchText(item.mediaMetadata.genre))
-                .toString()
-
         private val children: MutableList<MediaItem> = ArrayList()
 
         fun addChild(childID: String) {
@@ -389,16 +389,4 @@ class MediaTreeService(
         }
     }
 
-    private class StationId(val source: RadioSource, val sourceId: String) {
-        override fun toString(): String {
-            return source.name + "/" + sourceId
-        }
-
-        companion object {
-            fun parseString(mediaId: String): StationId {
-                val parts = mediaId.split("/")
-                return StationId(RadioSource.valueOf(parts[0]), parts[1])
-            }
-        }
-    }
 }

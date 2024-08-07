@@ -21,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
+import androidx.media3.common.HeartRating
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -37,6 +39,8 @@ import com.charlyghislain.openopenradio.ui.theme.OpenOpenRadioTheme
 import com.google.common.util.concurrent.Futures.immediateFuture
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 
 class HomeFragment : Fragment() {
 
@@ -133,6 +137,8 @@ fun HomePageContent(
 ) {
     var controller: MediaController? by remember { mutableStateOf(null) }
     var browser: MediaBrowser? by remember { mutableStateOf(null) }
+    val reloadEventFlow = MutableSharedFlow<ReloadEvent>()
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(controllerFuture) {
         controllerFuture.addListener({
@@ -159,6 +165,12 @@ fun HomePageContent(
                 MyPlayerView(
                     player = mediaController,
                     controller = mediaController,
+                    onSetRating = { item, hearth ->
+                        mediaController.setRating( HeartRating(hearth)).get()
+                        coroutineScope.launch { // Launch a coroutine
+                            reloadEventFlow.emit(ReloadEvent(item.mediaId))
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .fillMaxHeight()
@@ -170,7 +182,8 @@ fun HomePageContent(
                     browser = mediaBrowser,
                     controller = mediaController,
                     onBackNavigationAvailable = onBackNavigationAvailable,
-                    onNavigateUp = { callback -> onNavigateUp(callback) }
+                    onNavigateUp = { callback -> onNavigateUp(callback) },
+                    reloadEventFlow
                 )
             }
         }

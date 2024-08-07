@@ -1,13 +1,13 @@
 package com.charlyghislain.openopenradio.service.media
 
-import androidx.annotation.OptIn
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import androidx.lifecycle.map
+import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Rating
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DataSource
-import androidx.media3.datasource.DefaultHttpDataSource
-import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
@@ -15,10 +15,10 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSession.MediaItemsWithStartPosition
 import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
-import java.util.concurrent.Callable
 import java.util.stream.Collectors
 
 
@@ -46,7 +46,34 @@ class CustomMediaSessionCallback(val service: MediaPlaybackService) : MediaLibra
         rating: Rating
     ): ListenableFuture<SessionResult> {
         val item = session.player.currentMediaItem;
-        return super.onSetRating(session, controller, rating)
+        val heart: HeartRating = rating as HeartRating
+
+        val future = service.setFavorite(item?.mediaId, heart.isHeart)
+        Futures.addCallback(future, object : FutureCallback<SessionResult> {
+            override fun onSuccess(result: SessionResult?) {
+                if (item != null) {
+                    Handler(Looper.getMainLooper()).post { // Use a Handler to post the update to the main thread
+                        val updatedItem = item.buildUpon()
+                            .setMediaMetadata(
+                                item.mediaMetadata.buildUpon()
+                                    .apply {
+                                        setUserRating(HeartRating(heart.isHeart))
+                                    }.build()
+                            )
+                            .build()
+
+                        session.player.replaceMediaItem(0, updatedItem)
+                    }
+                }
+            }
+
+            override fun onFailure(t: Throwable) {
+                Log.e("CustomMediaSessionCallback", "onFailure", t)
+            }
+
+        }, MoreExecutors.directExecutor()) // Execute the callback on the main thread
+
+        return future
     }
 
     override fun onSetRating(
@@ -55,7 +82,8 @@ class CustomMediaSessionCallback(val service: MediaPlaybackService) : MediaLibra
         mediaId: String,
         rating: Rating
     ): ListenableFuture<SessionResult> {
-        return super.onSetRating(session, controller, mediaId, rating)
+        val heart: HeartRating = rating as HeartRating
+        return service.setFavorite(mediaId, heart.isHeart)
     }
 
     override fun onGetLibraryRoot(

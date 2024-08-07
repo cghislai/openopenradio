@@ -27,25 +27,25 @@ public interface RadioStationDao {
     @Query("SELECT * FROM radio_station ORDER BY name ASC LIMIT :offset,:length")
     LiveData<List<RadioStation>> getAllStationsPage(int offset, int length);
 
-    @Query("SELECT count(*) FROM radio_station WHERE genres LIKE '%' || :genre || '%'")
+    @Query("SELECT count(*) FROM radio_station WHERE genres LIKE '%' || :genre || '%'  ORDER BY name")
     int countStationsByGenre(String genre);
 
-    @Query("SELECT count(*) FROM radio_station WHERE languages LIKE '%' || :language || '%'")
+    @Query("SELECT count(*) FROM radio_station WHERE languages LIKE '%' || :language || '%'  ORDER BY name")
     int countStationsByLanguage(String language);
 
-    @Query("SELECT count(*) FROM radio_station WHERE country = :country")
+    @Query("SELECT count(*) FROM radio_station WHERE country = :country  ORDER BY name")
     int countStationsByCountry(String country);
 
-    @Query("SELECT * FROM radio_station WHERE genres LIKE '%' || :genre || '%'")
+    @Query("SELECT * FROM radio_station WHERE genres LIKE '%' || :genre || '%'  ORDER BY name")
     LiveData<List<RadioStation>> getStationsByGenre(String genre);
 
-    @Query("SELECT * FROM radio_station WHERE languages LIKE '%' || :language || '%'")
+    @Query("SELECT * FROM radio_station WHERE languages LIKE '%' || :language || '%'  ORDER BY name")
     LiveData<List<RadioStation>> getStationsByLanguage(String language);
 
-    @Query("SELECT * FROM radio_station WHERE country = :country")
+    @Query("SELECT * FROM radio_station WHERE country = :country  ORDER BY name")
     LiveData<List<RadioStation>> getStationsByCountry(String country);
 
-    @Query("SELECT * FROM radio_station WHERE source = :source AND sourceId = :sourceId")
+    @Query("SELECT * FROM radio_station WHERE source = :source AND sourceId = :sourceId  ORDER BY name")
     LiveData<RadioStation> findStationById(RadioSource source, String sourceId);
 
     @Query("SELECT * FROM radio_station " +
@@ -73,4 +73,11 @@ public interface RadioStationDao {
             "OR description LIKE '%' || :query || '%'" +
             "ORDER BY name ASC LIMIT :offset,:length")
     LiveData<List<RadioStation>> getStationsSearch(String query, int offset, int length);
+
+
+    @Query("SELECT s.* FROM radio_station s " +
+            "JOIN radio_station_favorite f ON s.source = f.source AND s.sourceId = f.sourceId " +
+            "ORDER BY s.name ASC")
+    LiveData<List<RadioStation>> getAllStationsFavorites();
+
 }

@@ -2,6 +2,7 @@ package com.charlyghislain.openopenradio.ui.components
 
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -47,6 +48,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
 import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionParameters
@@ -149,6 +151,7 @@ fun MediaControlOnly(
 fun MyPlayerView(
     player: Player,
     controller: MediaController,
+    onSetRating: (MediaItem, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -199,7 +202,6 @@ fun MyPlayerView(
                 if (image is BitmapDrawable) {
                     val softwareBitmap = image.bitmap.copy(Bitmap.Config.ARGB_8888, true)
 
-
                     val palette = Palette.from(softwareBitmap).generate()
                     background = Color(palette.getDominantColor(Color.White.toArgb()))
                     foreground = getComplementaryColor(background)
@@ -224,6 +226,8 @@ fun MyPlayerView(
 
     playerViewState?.let { state ->
         mediaItem?.let { item ->
+            val itemRatin = item.mediaMetadata.userRating as HeartRating;
+
             Box(modifier = Modifier.fillMaxSize()) {
                 Row(
                     modifier = Modifier
@@ -280,11 +284,10 @@ fun MyPlayerView(
                                     }
                                 )
                                 BinaryHeartRating(
-                                    isFavorite = mediaItem?.mediaMetadata?.userRating?.isRated == true, // Pass the current favorite status
+                                    isFavorite = itemRatin.isHeart == true, // Pass the current favorite status
                                     onToggleFavorite = {
-                                        val newStatus =
-                                            mediaItem?.mediaMetadata?.userRating?.isRated == false
-                                        controller.setRating(HeartRating(newStatus))
+                                        val newStatus = itemRatin.isHeart == false
+                                        onSetRating(item, newStatus)
                                     },
                                     color = state.foregroundColor
                                 )
@@ -326,31 +329,6 @@ fun MyPlayerView(
     } ?: run {
         CircularProgressIndicator()
     }
-}
-
-fun getPlayerStatus(controller: MediaController): String? {
-    val connected = controller.isConnected
-    if (!connected) {
-        return "Disconnected"
-    }
-
-    val error = controller.playerError
-    if (error != null) {
-        return "Error: ${error.message}"
-    }
-
-    val mediaItem = controller.currentMediaItem ?: return "Stopped"
-    val bufferSize = controller.totalBufferedDuration
-    if (bufferSize < 100) {
-        return "Buffering"
-    }
-    val playing = controller.isPlaying
-    if (!playing) {
-        return "Paused"
-    }
-
-
-    return "Playing"
 }
 
 @Composable
@@ -396,6 +374,31 @@ fun BinaryHeartRating(
     }
 }
 
+fun getPlayerStatus(controller: MediaController): String? {
+    val connected = controller.isConnected
+    if (!connected) {
+        return "Disconnected"
+    }
+
+    val error = controller.playerError
+    if (error != null) {
+        return "Error: ${error.message}"
+    }
+
+    val mediaItem = controller.currentMediaItem ?: return "Stopped"
+    val bufferSize = controller.totalBufferedDuration
+    if (bufferSize < 100) {
+        return "Buffering"
+    }
+    val playing = controller.isPlaying
+    if (!playing) {
+        return "Paused"
+    }
+
+
+    return "Playing"
+}
+
 class ControllerPlayerListener(
     private val callback: (MediaItem?) -> Unit,
     val player: Player,
@@ -416,6 +419,12 @@ class ControllerPlayerListener(
         super.onPlayerError(error)
         callback.invoke(player.currentMediaItem)
     }
+
+    override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+        super.onMediaMetadataChanged(mediaMetadata)
+        callback.invoke(player.currentMediaItem)
+    }
+
 }
 
 data class PlayerViewState(

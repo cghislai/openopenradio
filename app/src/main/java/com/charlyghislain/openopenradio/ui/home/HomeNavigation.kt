@@ -38,6 +38,11 @@ import androidx.paging.PagingState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
 import com.google.common.util.concurrent.MoreExecutors
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -48,7 +53,8 @@ private const val ROOT_ROUTE = "root"
 fun Navigation(
     browser: MediaBrowser, controller: MediaController,
     onBackNavigationAvailable: (Boolean) -> Unit,
-    onNavigateUp: (() -> Unit) -> Unit // Callback to handle navigation up
+    onNavigateUp: (() -> Unit) -> Unit, // Callback to handle navigation up
+    reloadEventFlow: MutableSharedFlow<ReloadEvent>
 ) {
     val navController = rememberNavController()
     var canNavigateBack by remember { mutableStateOf(false) }
@@ -66,14 +72,21 @@ fun Navigation(
     }
 
     NavHost(navController = navController, startDestination = ROOT_ROUTE) {
-        composable(ROOT_ROUTE) { MenuRootScreen(navController, browser, controller) }
+        composable(ROOT_ROUTE) {
+            MenuRootScreen(
+                navController,
+                browser,
+                controller,
+                reloadEventFlow
+            )
+        }
         composable(
             "${ROUTE_MEDIA_ITEM}/{mediaItemId}",
             arguments = listOf(navArgument("mediaItemId") { type = NavType.StringType })
         ) { backStackEntry ->
             val mediaItemId = backStackEntry.arguments?.getString("mediaItemId")
             mediaItemId?.let {
-                MenuScreen(navController, browser, controller, it)
+                MenuScreen(navController, browser, controller, it, reloadEventFlow)
             }
         }
     }
@@ -83,7 +96,8 @@ fun Navigation(
 fun MenuRootScreen(
     navController: NavController,
     browser: MediaBrowser,
-    controller: MediaController
+    controller: MediaController,
+    reloadEventFlow: MutableSharedFlow<ReloadEvent>
 ) {
     controller.prepare()
     browser.prepare()
@@ -100,7 +114,9 @@ fun MenuRootScreen(
     }
 
     rootItem?.let { item ->
-        MenuScreen(navController, browser, controller, item.mediaId)
+        MenuScreen(
+            navController, browser, controller, item.mediaId, reloadEventFlow = reloadEventFlow
+        )
     }
 }
 
@@ -110,15 +126,17 @@ fun MenuScreen(
     navController: NavController,
     browser: MediaBrowser,
     controller: MediaController,
-    itemId: String
+    itemId: String,
+    reloadEventFlow: MutableSharedFlow<ReloadEvent>
 ) {
     val pager = remember {
         Pager<Int, MediaItem>(
             config = PagingConfig(pageSize = 50, initialLoadSize = 50),
-            pagingSourceFactory = { MediaItemPagingSource(browser, itemId) }
+            pagingSourceFactory = { MediaItemPagingSource(browser, itemId, reloadEventFlow) },
         )
     }
     val lazyPagingItems = pager.flow.collectAsLazyPagingItems()
+
 
     LazyColumn(modifier = Modifier.fillMaxWidth(1f)) {
         items(lazyPagingItems.itemCount) { index ->
@@ -203,8 +221,19 @@ fun DynamicIcon(
 
 class MediaItemPagingSource(
     private val browser: MediaBrowser,
-    private val parentId: String
+    private val parentId: String,
+    reloadEventFlow: MutableSharedFlow<ReloadEvent>,
 ) : PagingSource<Int, MediaItem>() {
+    init {
+        // Launch a coroutine to collect from the flow
+        if (parentId == "[favorites]") {
+            CoroutineScope(Dispatchers.Main).launch { // Use Dispatchers.Main for UI thread safety
+                val event = reloadEventFlow.first() // Collect only the firstevent
+                invalidate()
+
+            }
+        }
+    }
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, MediaItem> {
         val pageToken = (params.key) ?: 0
@@ -244,3 +273,5 @@ class MediaItemPagingSource(
         return null
     }
 }
+
+data class ReloadEvent(val parentId: String)

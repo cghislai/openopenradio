@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">Open Open Radio</string>
-    <string name="title_activity_open_open_radio_main">OpenOpenRadioMain</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="nav_header_title">Open Open Radio</string>

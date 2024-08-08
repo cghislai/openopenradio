@@ -4,7 +4,6 @@ plugins {
     id("com.google.dagger.hilt.android")
     id("com.android.library")
 
-//    kotlin("multiplatform")
     kotlin("plugin.serialization") version "2.0.0"
 }
 
@@ -17,6 +16,12 @@ android {
         targetSdk = 34
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments.put("room.schemaLocation", "$projectDir/schemas")
+            }
+        }
     }
 
     buildTypes {
@@ -35,6 +40,7 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
 }
 
 dependencies {

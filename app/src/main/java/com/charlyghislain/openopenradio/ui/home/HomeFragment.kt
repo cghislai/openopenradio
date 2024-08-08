@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,23 +30,30 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.media3.common.HeartRating
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
+import com.charlyghislain.openopenradio.R
 import com.charlyghislain.openopenradio.service.media.MediaPlaybackService
 import com.charlyghislain.openopenradio.ui.components.MyPlayerView
+import com.charlyghislain.openopenradio.ui.model.MainViewModel
+import com.charlyghislain.openopenradio.ui.model.NestedNavState
 import com.charlyghislain.openopenradio.ui.theme.OpenOpenRadioTheme
 import com.google.common.util.concurrent.Futures.immediateFuture
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 class HomeFragment : Fragment() {
 
-    private lateinit var sessionToken: SessionToken
-    private lateinit var backNavigationListener: BackNavigationListener
+    private val sessionTokenReference: MutableState<SessionToken?> = mutableStateOf(null)
+    private lateinit var mainViewModel: MainViewModel
 
     private var controllerFuture by mutableStateOf<ListenableFuture<MediaController>>(
         immediateFuture(null)
@@ -55,8 +63,9 @@ class HomeFragment : Fragment() {
     override fun onStart() {
         super.onStart()
         val context = requireContext();
-        sessionToken =
+        sessionTokenReference.value =
             SessionToken(context, ComponentName(context, MediaPlaybackService::class.java))
+        mainViewModel = ViewModelProvider(requireActivity()).get(MainViewModel::class.java)
 
         if (
             Build.VERSION.SDK_INT >= 33 &&
@@ -78,24 +87,23 @@ class HomeFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         val context = requireContext();
-        controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
-        browserFuture = MediaBrowser.Builder(context, sessionToken).buildAsync()
+
+        sessionTokenReference.value?.let { token ->
+            controllerFuture = MediaController.Builder(context, token).buildAsync()
+            browserFuture = MediaBrowser.Builder(context, token).buildAsync()
+        }
     }
 
     override fun onPause() {
         super.onPause()
         MediaController.releaseFuture(controllerFuture)
         MediaBrowser.releaseFuture(browserFuture)
+//        mainViewModel.nestedNavState.value = NestedNavState()
     }
 
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        if (context is BackNavigationListener) {
-            backNavigationListener = context
-        } else {
-            throw RuntimeException("$context must implement BackNavigationListener")
-        }
     }
 
 
@@ -104,26 +112,29 @@ class HomeFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        super.onCreateView(inflater, container, savedInstanceState)
+
         // Inflate a ComposeView
         return ComposeView(requireContext()).apply {
             setContent {
                 OpenOpenRadioTheme {
+                    val nestedNavController = rememberNavController() // For the Compose NavHost
+                    mainViewModel.nestedNavigationUpHandler = { nestedNavController.navigateUp() }
                     HomePageContent(
                         controllerFuture,
                         browserFuture,
-                        onBackNavigationAvailable = { a ->
-                            backNavigationListener.onBackNavigationAvailable(
-                                a
-                            )
-                        },
-                        onNavigateUp = { callback ->
-                            backNavigationListener.onNavigateUpCallback(callback) // Assign the callback
-                        }
+                        nestedNavState = mainViewModel.nestedNavState,
+                        navController = nestedNavController,
                     )
                 }
             }
         }
     }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+    }
+
 
 }
 
@@ -132,8 +143,8 @@ class HomeFragment : Fragment() {
 fun HomePageContent(
     controllerFuture: ListenableFuture<MediaController>,
     browserFuture: ListenableFuture<MediaBrowser>,
-    onBackNavigationAvailable: (Boolean) -> Unit,
-    onNavigateUp: (() -> Unit) -> Unit // Callback to handle navigation up
+    nestedNavState: MutableStateFlow<NestedNavState>,
+    navController: NavHostController,
 ) {
     var controller: MediaController? by remember { mutableStateOf(null) }
     var browser: MediaBrowser? by remember { mutableStateOf(null) }
@@ -151,7 +162,6 @@ fun HomePageContent(
         }, MoreExecutors.directExecutor())
     }
 
-
     Column(modifier = Modifier.fillMaxSize()) {
         // Fixed-width component at the top
         controller?.let { mediaController ->
@@ -166,7 +176,7 @@ fun HomePageContent(
                     player = mediaController,
                     controller = mediaController,
                     onSetRating = { item, hearth ->
-                        mediaController.setRating( HeartRating(hearth)).get()
+                        mediaController.setRating(HeartRating(hearth)).get()
                         coroutineScope.launch { // Launch a coroutine
                             reloadEventFlow.emit(ReloadEvent(item.mediaId))
                         }
@@ -181,9 +191,9 @@ fun HomePageContent(
                 Navigation(
                     browser = mediaBrowser,
                     controller = mediaController,
-                    onBackNavigationAvailable = onBackNavigationAvailable,
-                    onNavigateUp = { callback -> onNavigateUp(callback) },
-                    reloadEventFlow
+                    navController = navController,
+                    nestedNavState = nestedNavState,
+                    reloadEventFlow = reloadEventFlow
                 )
             }
         }
@@ -191,8 +201,3 @@ fun HomePageContent(
     }
 }
 
-interface BackNavigationListener {
-    fun onBackNavigationAvailable(available: Boolean)
-
-    fun onNavigateUpCallback(callback: () -> Unit)
-}

@@ -2,47 +2,63 @@ package com.charlyghislain.openopenradio
 
 import android.os.Bundle
 import android.view.Menu
-import com.google.android.material.snackbar.Snackbar
-import com.google.android.material.navigation.NavigationView
+import android.view.MenuItem
+import androidx.appcompat.app.ActionBar
+import androidx.appcompat.app.AppCompatActivity
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.findNavController
+import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
-import androidx.drawerlayout.widget.DrawerLayout
-import androidx.appcompat.app.AppCompatActivity
 import com.charlyghislain.openopenradio.databinding.ActivityOpenOpenRadioMainBinding
-import com.charlyghislain.openopenradio.ui.home.BackNavigationListener
+import com.charlyghislain.openopenradio.ui.model.MainViewModel
+import com.charlyghislain.openopenradio.ui.model.NestedNavState
+import com.google.android.material.navigation.NavigationView
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
-class OpenOpenRadioMain : AppCompatActivity(), BackNavigationListener {
+@AndroidEntryPoint
+class OpenOpenRadioMain : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityOpenOpenRadioMainBinding
-
-    // Callback set once navigation component is set up
-    private var onNavigateUpCallback: (() -> Unit)? = null
+    private lateinit var mainViewModel: MainViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        mainViewModel = ViewModelProvider(this).get(MainViewModel::class.java)
 
         binding = ActivityOpenOpenRadioMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         setSupportActionBar(binding.appBarOpenOpenRadioMain.toolbar)
-        supportActionBar?.setDisplayShowHomeEnabled(false)
 
         val drawerLayout: DrawerLayout = binding.drawerLayout
-//        val navView: NavigationView = binding.navView
-//        val navController = findNavController(R.id.nav_host_fragment_content_open_open_radio_main)
-        // Passing each menu ID as a set of Ids because each
-        // menu should be considered as top level destinations.
-        appBarConfiguration = AppBarConfiguration(
-            setOf(
-                R.id.nav_home,
-            ), drawerLayout
-        )
-//        setupActionBarWithNavController(navController, appBarConfiguration)
-//        navView.setupWithNavController(navController)
+        val navHost: NavHostFragment =
+            supportFragmentManager.findFragmentById(R.id.nav_host_fragment_content_open_open_radio_main) as NavHostFragment
+        val navView: NavigationView = binding.navView
+        val navController = navHost.navController as NavHostController
+        appBarConfiguration = AppBarConfiguration(setOf(), drawerLayout)
+
+        setupActionBarWithNavController(navController, appBarConfiguration)
+        navView.setupWithNavController(navController)
+        supportActionBar?.setHomeButtonEnabled(false)
+
+
+        lifecycleScope.launch {
+            mainViewModel.nestedNavState.collect { state ->
+                handleNestedNavigationChange(navController, state)
+            }
+        }
+        navController.addOnDestinationChangedListener { _, d, _ ->
+            handleMainNavigationChange(d)
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -51,26 +67,60 @@ class OpenOpenRadioMain : AppCompatActivity(), BackNavigationListener {
         return true
     }
 
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        val navController = findNavController(R.id.nav_host_fragment_content_open_open_radio_main)
+        return when (item.itemId) {
+            R.id.action_settings -> {
+                navController.navigate(R.id.nav_settings)
+//                onBackNavigationAvailable(true)
+                true
+            }
+
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
     override fun onSupportNavigateUp(): Boolean {
-        onNavigateUpCallback?.invoke() ?: return false
-        return true;
-
-//        return super.onSupportNavigateUp()
-//        val navController = findNavController(R.id.nav_host_fragment_content_open_open_radio_main)
-//        return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
+        val navController = findNavController(R.id.nav_host_fragment_content_open_open_radio_main)
+        val isHome = navController.currentBackStackEntry?.destination?.id == R.id.nav_home
+        return if (!isHome) {
+            navController.navigateUp()
+        } else if (mainViewModel.nestedNavigationUpHandler != null) {
+            mainViewModel.nestedNavigationUpHandler!!.invoke()
+        } else {
+            true;
+        }
     }
 
-    override fun onNavigateUp(): Boolean {
-        onNavigateUpCallback?.invoke() ?: return false
-        return true
+    private fun handleMainNavigationChange(destination: NavDestination) {
+        val backAvailable = when (destination.id) {
+            R.id.nav_home -> false
+            else -> true
+        }
+        setBackNavigationAvailable(backAvailable)
     }
 
-    override fun onNavigateUpCallback(callback: () -> Unit) {
-        onNavigateUpCallback = callback
+    private fun handleNestedNavigationChange(
+        mainController: NavHostController,
+        state: NestedNavState
+    ) {
+        if (state.isBackStackEmpty != null) {
+            mainController.enableOnBackPressed(!state.isBackStackEmpty)
+            setBackNavigationAvailable(!state.isBackStackEmpty)
+        }
+        if (state.currentTitle != null) {
+            supportActionBar?.setTitle(state.currentTitle)
+        }
     }
 
-    override fun onBackNavigationAvailable(available: Boolean) {
-        supportActionBar?.setDisplayShowHomeEnabled(available)
-        supportActionBar?.setDisplayHomeAsUpEnabled(available)
+    private fun setBackNavigationAvailable(available: Boolean) {
+        val mask = (ActionBar.DISPLAY_SHOW_HOME
+                or ActionBar.DISPLAY_HOME_AS_UP)
+        val bits = when (available) {
+            true -> ActionBar.DISPLAY_SHOW_HOME or ActionBar.DISPLAY_HOME_AS_UP
+            else -> 0
+        }
+        supportActionBar?.setDisplayOptions(bits, mask)
     }
 }

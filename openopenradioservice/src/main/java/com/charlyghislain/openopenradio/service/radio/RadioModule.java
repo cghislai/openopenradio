@@ -1,7 +1,10 @@
 package com.charlyghislain.openopenradio.service.radio;
 
 import android.app.Application;
+import android.content.Context;
 
+import androidx.datastore.core.DataStore;
+import androidx.datastore.core.DataStoreFactory;
 import androidx.room.Room;
 
 import com.charlyghislain.openopenradio.service.radio.dao.RadioCountryDao;
@@ -16,12 +19,17 @@ import com.charlyghislain.openopenradio.service.radio.repository.GenreRepository
 import com.charlyghislain.openopenradio.service.radio.repository.LanguageRepository;
 import com.charlyghislain.openopenradio.service.radio.repository.StationFavoritesRepository;
 import com.charlyghislain.openopenradio.service.radio.repository.StationRepository;
+import com.charlyghislain.openopenradio.service.radio.settings.Settings;
+import com.charlyghislain.openopenradio.service.radio.settings.SettingsSerializer;
+
+import java.io.File;
 
 import javax.inject.Singleton;
 
 import dagger.Module;
 import dagger.Provides;
 import dagger.hilt.InstallIn;
+import dagger.hilt.android.qualifiers.ApplicationContext;
 import dagger.hilt.components.SingletonComponent;
 
 @Module
@@ -97,5 +105,15 @@ public class RadioModule {
                                                 RadioStationDao radioStationsDao,
                                                 RadioStationFavoriteDao radioStationFavoriteDao) {
         return new StationRepository(webRadioClient, radioStationsDao, radioStationFavoriteDao);
+    }
+
+
+    @Provides
+    @Singleton
+    DataStore<Settings> provideDataStoreSettings(@ApplicationContext Context appContext) {
+        return DataStoreFactory.INSTANCE.create(
+                SettingsSerializer.INSTANCE,
+                () -> new File(appContext.getFilesDir(), "settings.json")
+        );
     }
 }

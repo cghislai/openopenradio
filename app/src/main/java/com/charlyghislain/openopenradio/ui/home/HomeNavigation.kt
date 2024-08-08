@@ -21,15 +21,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.MediaController
 import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -37,56 +38,81 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
+import com.charlyghislain.openopenradio.R
+import com.charlyghislain.openopenradio.ui.model.NestedNavState
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 private const val ROUTE_MEDIA_ITEM = "mediaItem"
-private const val ROOT_ROUTE = "root"
 
 @Composable
 fun Navigation(
-    browser: MediaBrowser, controller: MediaController,
-    onBackNavigationAvailable: (Boolean) -> Unit,
-    onNavigateUp: (() -> Unit) -> Unit, // Callback to handle navigation up
+    browser: MediaBrowser,
+    controller: MediaController,
+    navController: NavHostController,
+    nestedNavState: MutableStateFlow<NestedNavState>,
     reloadEventFlow: MutableSharedFlow<ReloadEvent>
 ) {
-    val navController = rememberNavController()
-    var canNavigateBack by remember { mutableStateOf(false) }
-
-    LaunchedEffect(navController) {
-        navController.currentBackStackEntryFlow.collect { entry ->
-            canNavigateBack = entry.destination.route != ROOT_ROUTE
-        }
-    }
-    LaunchedEffect(canNavigateBack) {
-        onBackNavigationAvailable(canNavigateBack)
-    }
-    LaunchedEffect(onNavigateUp) {
-        onNavigateUp({ navController.navigateUp() })
+    val rootRoute = stringResource(R.string.nav_home_root)
+    val appname = stringResource(id = R.string.app_name)
+    var browserConnected: Boolean by remember {
+        mutableStateOf(browser.isConnected)
     }
 
-    NavHost(navController = navController, startDestination = ROOT_ROUTE) {
-        composable(ROOT_ROUTE) {
-            MenuRootScreen(
-                navController,
-                browser,
-                controller,
-                reloadEventFlow
+    LaunchedEffect(navController, browser.isConnected) {
+        browserConnected = browser.isConnected
+
+        navController.addOnDestinationChangedListener { _, destination, arguments ->
+            var title = appname
+            if (destination.route.toString().startsWith(ROUTE_MEDIA_ITEM)) {
+                val mediaId = arguments?.getString("mediaItemId")
+                if (mediaId != null) {
+                    val parentItem = browser.getItem(mediaId.toString())
+                    if (parentItem.get().value != null) {
+                        title =
+                            parentItem.get().value?.mediaMetadata?.title.toString() // Use an empty string as a default if title is null
+                    } else {
+                        title = appname
+                        // FIXME
+                    }
+                }
+            }
+
+            nestedNavState.value = NestedNavState(
+                isBackStackEmpty = navController.previousBackStackEntry == null,
+                currentTitle = title // Or get title from your route data
             )
         }
-        composable(
-            "${ROUTE_MEDIA_ITEM}/{mediaItemId}",
-            arguments = listOf(navArgument("mediaItemId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val mediaItemId = backStackEntry.arguments?.getString("mediaItemId")
-            mediaItemId?.let {
-                MenuScreen(navController, browser, controller, it, reloadEventFlow)
+    }
+
+    if (browserConnected) {
+        NavHost(
+            navController = navController,
+            startDestination = rootRoute
+        ) {
+            composable(route = rootRoute) {
+                MenuRootScreen(
+                    navController,
+                    browser,
+                    controller,
+                    reloadEventFlow
+                )
+            }
+            composable(
+                "${ROUTE_MEDIA_ITEM}/{mediaItemId}",
+                arguments = listOf(navArgument("mediaItemId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val mediaItemId = backStackEntry.arguments?.getString("mediaItemId")
+                mediaItemId?.let {
+                    MenuScreen(navController, browser, controller, it, reloadEventFlow)
+                }
             }
         }
     }
@@ -115,7 +141,8 @@ fun MenuRootScreen(
 
     rootItem?.let { item ->
         MenuScreen(
-            navController, browser, controller, item.mediaId, reloadEventFlow = reloadEventFlow
+            navController, browser, controller, item.mediaId,
+            reloadEventFlow = reloadEventFlow
         )
     }
 }

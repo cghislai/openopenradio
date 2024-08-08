@@ -3,6 +3,9 @@ plugins {
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
     id("com.android.library")
+
+//    kotlin("multiplatform")
+    kotlin("plugin.serialization") version "2.0.0"
 }
 
 android {
@@ -45,13 +48,16 @@ dependencies {
 
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
-    implementation(libs.androidx.media3.exoplayer.hls) // HLS extension
+    implementation(libs.androidx.media3.exoplayer.hls)
 
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)
     implementation(libs.androidx.room.common)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.serialization.core)
     implementation(libs.guava)
     implementation(libs.lifecycle.process)
     implementation(libs.gson)

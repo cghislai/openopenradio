@@ -37,8 +37,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.charlyghislain.openopenradio.R
-import com.charlyghislain.openopenradio.service.media.MediaPlaybackService
+import com.charlyghislain.openopenradio.service.OpenOpenRadioPlaybackService
 import com.charlyghislain.openopenradio.ui.components.MyPlayerView
 import com.charlyghislain.openopenradio.ui.model.MainViewModel
 import com.charlyghislain.openopenradio.ui.model.NestedNavState
@@ -64,7 +63,7 @@ class HomeFragment : Fragment() {
         super.onStart()
         val context = requireContext();
         sessionTokenReference.value =
-            SessionToken(context, ComponentName(context, MediaPlaybackService::class.java))
+            SessionToken(context, ComponentName(context, OpenOpenRadioPlaybackService::class.java))
         mainViewModel = ViewModelProvider(requireActivity()).get(MainViewModel::class.java)
 
         if (

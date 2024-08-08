@@ -33,7 +33,7 @@ import java.util.concurrent.CompletableFuture
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MediaPlaybackService : MediaSessionService() {
+open class MediaPlaybackService : MediaSessionService() {
     companion object {
         private const val NOTIFICATION_ID = 123
         private const val CHANNEL_ID = "session_notification_channel_id"
@@ -108,7 +108,7 @@ class MediaPlaybackService : MediaSessionService() {
 
         mediaSession = MediaLibrarySession.Builder(this, player, CustomMediaSessionCallback(this))
 //            .setPeriodicPositionUpdateEnabled(false)
-//            .setSessionActivity()
+            .also { builder -> getSingleTopActivity()?.let { builder.setSessionActivity(it) } }
             .build()
         setListener(MediaSessionServiceListener())
     }

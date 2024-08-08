@@ -2,11 +2,8 @@ package com.charlyghislain.openopenradio.ui.components
 
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
-import android.util.Log
-import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +23,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,27 +31,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.C
 import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
-import androidx.media3.common.TrackSelectionParameters
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
-import androidx.media3.ui.PlayerControlView
-import androidx.media3.ui.PlayerView
 import androidx.palette.graphics.Palette
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
@@ -63,88 +51,6 @@ import coil.request.ImageRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-@OptIn(UnstableApi::class)
-@Composable
-fun RadioController(
-    player: Player,
-    modifier: Modifier = Modifier,
-) {
-    val context = LocalContext.current
-
-    val trackSelectionParameters = TrackSelectionParameters.Builder(context)
-        .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
-        .build()
-
-    val playerView = PlayerView(context).apply {
-        this.player = player // Attach the player to the PlayerView
-        this.useController = true;
-        this.hideController();
-        this.setShowFastForwardButton(false)
-        this.setShowRewindButton(false)
-        this.setShowPreviousButton(false)
-        this.setShowNextButton(false)
-        this.setShowVrButton(false)
-        this.showController();
-    }
-    LaunchedEffect(player) {
-        player.trackSelectionParameters = trackSelectionParameters
-    }
-
-    AndroidView(
-        modifier = modifier
-            .focusable()
-            .onKeyEvent { playerView.dispatchKeyEvent(it.nativeKeyEvent) },
-
-        factory = { context ->
-            playerView
-        },
-        update = { playerView ->
-            // Update the PlayerView if needed (e.g., when the player changes)
-            playerView.player = player
-        })
-
-}
-
-
-@OptIn(UnstableApi::class)
-@Composable
-fun MediaControlOnly(
-    player: Player,
-    modifier: Modifier = Modifier,
-) {
-    val context = LocalContext.current
-
-    val trackSelectionParameters = TrackSelectionParameters.Builder(context)
-        .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
-        .build()
-
-    val controlView = PlayerControlView(context).apply {
-        this.player = player // Attach the player to the PlayerView
-        this.setShowFastForwardButton(false)
-        this.setShowRewindButton(false)
-        this.setShowPreviousButton(false)
-        this.setShowNextButton(false)
-    }
-
-    LaunchedEffect(player) {
-        player.trackSelectionParameters = trackSelectionParameters
-    }
-
-    AndroidView(
-        modifier = modifier
-            .focusable()
-            .onKeyEvent { controlView.dispatchKeyEvent(it.nativeKeyEvent) },
-
-        factory = { context ->
-            controlView
-        },
-        update = { playerView ->
-            // Update the PlayerView if needed (e.g., when the player changes)
-            playerView.player = player
-        })
-
-}
 
 
 @Composable
@@ -203,7 +109,7 @@ fun MyPlayerView(
                     val softwareBitmap = image.bitmap.copy(Bitmap.Config.ARGB_8888, true)
 
                     val palette = Palette.from(softwareBitmap).generate()
-                    background = Color(palette.getDominantColor(Color.White.toArgb()))
+                    background = Color(palette.getLightVibrantColor(Color.White.toArgb()))
                     foreground = getComplementaryColor(background)
                 }
                 withContext(Dispatchers.Main) {

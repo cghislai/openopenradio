@@ -284,6 +284,15 @@ class MediaTreeService(
                 mediaType = MediaMetadata.MEDIA_TYPE_FOLDER_MIXED
             )
         )
+        treeNodes[FAVORITES_ID] = MediaItemNode(
+            buildMediaItem(
+                "Favorites",
+                FAVORITES_ID,
+                isPlayable = false,
+                isBrowsable = true,
+                mediaType = MediaMetadata.MEDIA_TYPE_FOLDER_MIXED
+            )
+        )
         treeNodes[GENRE_ID] = MediaItemNode(
             buildMediaItem(
                 "Genres",
@@ -311,15 +320,7 @@ class MediaTreeService(
                 mediaType = MediaMetadata.MEDIA_TYPE_FOLDER_MIXED
             )
         )
-        treeNodes[FAVORITES_ID] = MediaItemNode(
-            buildMediaItem(
-                "Favorites",
-                FAVORITES_ID,
-                isPlayable = false,
-                isBrowsable = true,
-                mediaType = MediaMetadata.MEDIA_TYPE_FOLDER_MIXED
-            )
-        )
+
         treeNodes[ALL_ID] = MediaItemNode(
             buildMediaItem(
                 "All stations",
@@ -329,10 +330,10 @@ class MediaTreeService(
                 mediaType = MediaMetadata.MEDIA_TYPE_FOLDER_MIXED
             )
         )
+        treeNodes[ROOT_ID]!!.addChild(FAVORITES_ID)
         treeNodes[ROOT_ID]!!.addChild(GENRE_ID)
         treeNodes[ROOT_ID]!!.addChild(COUNTRY_ID)
         treeNodes[ROOT_ID]!!.addChild(LANGUAGE_ID)
-        treeNodes[ROOT_ID]!!.addChild(FAVORITES_ID)
         treeNodes[ROOT_ID]!!.addChild(ALL_ID)
     }
 
@@ -370,7 +371,6 @@ class MediaTreeService(
 
 
     private class MediaItemNode(var item: MediaItem) {
-        val searchTitle = normalizeSearchText(item.mediaMetadata.title)
         private val children: MutableList<MediaItem> = ArrayList()
 
         fun addChild(childID: String) {

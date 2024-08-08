@@ -22,7 +22,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import java.util.stream.Collectors
 
 
-class CustomMediaSessionCallback(val service: MediaPlaybackService) : MediaLibrarySession.Callback {
+open class MediaSessionCallback(val service: OpenOpenRadioMediaPlaybackService) : MediaLibrarySession.Callback {
 
 
     // Configure commands available to the controller in onConnect()

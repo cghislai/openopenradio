@@ -25,7 +25,6 @@ import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionResult
 import com.charlyghislain.openopenradio.service.R
 import com.charlyghislain.openopenradio.service.radio.repository.StationFavoritesRepository
-import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import dagger.hilt.android.AndroidEntryPoint
@@ -33,7 +32,7 @@ import java.util.concurrent.CompletableFuture
 import javax.inject.Inject
 
 @AndroidEntryPoint
-open class MediaPlaybackService : MediaSessionService() {
+open class OpenOpenRadioMediaPlaybackService : MediaSessionService() {
     companion object {
         private const val NOTIFICATION_ID = 123
         private const val CHANNEL_ID = "session_notification_channel_id"
@@ -65,6 +64,16 @@ open class MediaPlaybackService : MediaSessionService() {
      * If null is returned, [MediaSession.setSessionActivity] is not set by the demo service.
      */
     open fun getBackStackedActivity(): PendingIntent? = null
+
+    /**
+     * Creates the library session callback to implement the domain logic. Can be overridden to return
+     * an alternative callback, for example a subclass of [DemoMediaLibrarySessionCallback].
+     *
+     * This method is called when the session is built by the [DemoPlaybackService].
+     */
+    protected open fun createLibrarySessionCallback(): MediaLibrarySession.Callback {
+        return MediaSessionCallback(this)
+    }
 
     private var mediaSession: MediaLibrarySession? = null
 
@@ -106,7 +115,7 @@ open class MediaPlaybackService : MediaSessionService() {
         player.addListener(PlayerListener(player))
 
 
-        mediaSession = MediaLibrarySession.Builder(this, player, CustomMediaSessionCallback(this))
+        mediaSession = MediaLibrarySession.Builder(this, player, createLibrarySessionCallback())
 //            .setPeriodicPositionUpdateEnabled(false)
             .also { builder -> getSingleTopActivity()?.let { builder.setSessionActivity(it) } }
             .build()
@@ -161,10 +170,10 @@ open class MediaPlaybackService : MediaSessionService() {
                 return
             }
             val notificationManagerCompat =
-                NotificationManagerCompat.from(this@MediaPlaybackService)
+                NotificationManagerCompat.from(this@OpenOpenRadioMediaPlaybackService)
             ensureNotificationChannel(notificationManagerCompat)
             val builder =
-                NotificationCompat.Builder(this@MediaPlaybackService, CHANNEL_ID)
+                NotificationCompat.Builder(this@OpenOpenRadioMediaPlaybackService, CHANNEL_ID)
                     .setSmallIcon(androidx.media3.session.R.drawable.media3_notification_small_icon)
                     .setContentTitle(getString(R.string.notification_content_title))
                     .setStyle(

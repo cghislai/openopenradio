@@ -5,11 +5,11 @@ import android.app.TaskStackBuilder
 import android.content.Intent
 import android.os.Build
 import com.charlyghislain.openopenradio.OpenOpenRadioMain
-import com.charlyghislain.openopenradio.service.media.MediaPlaybackService
+import com.charlyghislain.openopenradio.service.media.OpenOpenRadioMediaPlaybackService
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class OpenOpenRadioPlaybackService : MediaPlaybackService() {
+class OpenOpenRadioPlaybackServiceOpenOpenRadio : OpenOpenRadioMediaPlaybackService() {
 
 
     companion object {
@@ -28,7 +28,7 @@ class OpenOpenRadioPlaybackService : MediaPlaybackService() {
 
     override fun getBackStackedActivity(): PendingIntent? {
         return TaskStackBuilder.create(this).run {
-            addNextIntent(Intent(this@OpenOpenRadioPlaybackService, OpenOpenRadioMain::class.java))
+            addNextIntent(Intent(this@OpenOpenRadioPlaybackServiceOpenOpenRadio, OpenOpenRadioMain::class.java))
             getPendingIntent(0, immutableFlag or PendingIntent.FLAG_UPDATE_CURRENT)
         }
     }

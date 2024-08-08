@@ -4,15 +4,14 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.lifecycle.Transformations;
 
-import com.charlyghislain.openopenradio.service.radio.dao.RadioStationFavoriteDao;
-import com.charlyghislain.openopenradio.service.radio.model.RatedStation;
-import com.charlyghislain.openopenradio.service.radio.model.entity.RadioSource;
 import com.charlyghislain.openopenradio.service.client.webradio.WebRadioClient;
 import com.charlyghislain.openopenradio.service.client.webradio.model.WebRadioStation;
 import com.charlyghislain.openopenradio.service.radio.dao.RadioStationDao;
+import com.charlyghislain.openopenradio.service.radio.dao.RadioStationFavoriteDao;
+import com.charlyghislain.openopenradio.service.radio.model.RatedStation;
+import com.charlyghislain.openopenradio.service.radio.model.entity.RadioSource;
 import com.charlyghislain.openopenradio.service.radio.model.entity.RadioStation;
 import com.charlyghislain.openopenradio.service.util.RequestCallback;
 
@@ -27,6 +26,7 @@ public class StationRepository {
     private final WebRadioClient webRadioClient;
     private final RadioStationDao radioStationDao;
     private final RadioStationFavoriteDao radioStationFavoriteDao;
+    private final LiveData<List<RadioStation>> alLFavorites;
 
     public StationRepository(WebRadioClient webRadioClient,
                              RadioStationDao radioStationDao,
@@ -34,6 +34,7 @@ public class StationRepository {
         this.webRadioClient = webRadioClient;
         this.radioStationDao = radioStationDao;
         this.radioStationFavoriteDao = radioStationFavoriteDao;
+        this.alLFavorites = radioStationDao.getAllStationsFavorites();
     }
 
     public LiveData<List<RatedStation>> getStations() {
@@ -140,11 +141,12 @@ public class StationRepository {
     // Helper function to create LiveData<RatedStation> for each RadioStation
     private LiveData<RatedStation> getRatedStation(RadioStation station) {
         MutableLiveData<RatedStation> ratedStationLiveData = new MutableLiveData<>();
-        // Use ProcessLifecycleOwner to provide a lifecycle owner for observeForever
-        radioStationFavoriteDao.isStationFavorite(station.getSource(), station.getSourceId())
-                .observe(ProcessLifecycleOwner.get(), isFavorite -> {
-                    ratedStationLiveData.postValue(new RatedStation(station, isFavorite)); // Use postValue for background threads
-                });
+        List<RadioStation> favorites = alLFavorites.getValue();
+        if (favorites == null) {
+            favorites = Collections.emptyList();
+        }
+        boolean isFavorite = favorites.contains(station);
+        ratedStationLiveData.postValue(new RatedStation(station, isFavorite)); // Use postValue for background threads
         return ratedStationLiveData;
     }
 

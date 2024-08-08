@@ -30,7 +30,7 @@ class SettingsViewModel @Inject constructor(
     private val dataStore: DataStore<Settings>
 ) : ViewModel() {
 
-    val settingsFlow: Flow<Settings> = dataStore.data.catch { exception ->
+    val settingsFlow: Flow<Settings> = dataStore.data.catch { _ ->
         // Handle exceptions, e.g., emit default settings
         emit(Settings())
     }

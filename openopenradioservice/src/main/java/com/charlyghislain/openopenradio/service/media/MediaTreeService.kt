@@ -9,7 +9,6 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Rating
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.session.MediaLibraryService
 import com.charlyghislain.openopenradio.service.radio.model.RatedStation
 import com.charlyghislain.openopenradio.service.radio.repository.CountryRepository
 import com.charlyghislain.openopenradio.service.radio.repository.GenreRepository
@@ -90,7 +89,6 @@ class MediaTreeService(
 
     fun getChildren(
         parentId: String,
-        params: MediaLibraryService.LibraryParams?,
         page: Int,
         pageSize: Int
     ): ListenableFuture<List<MediaItem>> {

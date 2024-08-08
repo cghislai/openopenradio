@@ -255,9 +255,8 @@ class MediaItemPagingSource(
         // Launch a coroutine to collect from the flow
         if (parentId == "[favorites]") {
             CoroutineScope(Dispatchers.Main).launch { // Use Dispatchers.Main for UI thread safety
-                val event = reloadEventFlow.first() // Collect only the firstevent
+                reloadEventFlow.first() // Collect only the firstevent
                 invalidate()
-
             }
         }
     }

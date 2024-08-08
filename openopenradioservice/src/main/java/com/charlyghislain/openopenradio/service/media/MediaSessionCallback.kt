@@ -117,7 +117,7 @@ open class MediaSessionCallback(val service: OpenOpenRadioMediaPlaybackService) 
         pageSize: Int,
         params: MediaLibraryService.LibraryParams?
     ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-        val future = service.treeService.getChildren(parentId, params, page, pageSize)
+        val future = service.treeService.getChildren(parentId, page, pageSize)
         return Futures.transform(
             future, { list -> LibraryResult.ofItemList(list, params) },
             MoreExecutors.directExecutor()

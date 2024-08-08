@@ -58,7 +58,6 @@ fun MyPlayerView(
     player: Player,
     controller: MediaController,
     onSetRating: (MediaItem, Boolean) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -74,7 +73,7 @@ fun MyPlayerView(
     }
     player.addListener(
         ControllerPlayerListener(
-            { item ->
+            { _ ->
                 coroutineScope.launch { // Launch a coroutine
                     mediaItem = controller.currentMediaItem
                     mediaPlaying = controller.isPlaying
@@ -139,7 +138,7 @@ fun MyPlayerView(
                     modifier = Modifier
                         .fillMaxSize()
                         .align(Alignment.CenterEnd)
-                        .background(playerViewState!!.backgroundColor ?: Color.White)
+                        .background(playerViewState!!.backgroundColor)
                 ) {
                     AsyncImage(
                         item.mediaMetadata.artworkUri,
@@ -291,7 +290,7 @@ fun getPlayerStatus(controller: MediaController): String? {
         return "Error: ${error.message}"
     }
 
-    val mediaItem = controller.currentMediaItem ?: return "Stopped"
+    controller.currentMediaItem ?: return "Stopped"
     val bufferSize = controller.totalBufferedDuration
     if (bufferSize < 100) {
         return "Buffering"

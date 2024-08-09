@@ -15,7 +15,7 @@ Browse & play your favorite webradios on your android devices.
 - Android automotive support
 
 
-## Privacy policy
+## Privacy
 
 - This app does not collect any information
 - This app contact external services that may monitor your devices

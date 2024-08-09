@@ -6,8 +6,6 @@ import android.graphics.drawable.BitmapDrawable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
@@ -24,12 +22,12 @@ import kotlinx.coroutines.launch
 
 class RadioControllerViewModel(
     application: Application,
-    player: Player,
-    val controller: MediaController,
 ) : AndroidViewModel(application) {
-    val mediaItemFlow = MutableStateFlow(controller.currentMediaItem)
-    val mediaPlayingFlow = MutableStateFlow(controller.isPlaying)
-    val mediaStatusFlow = MutableStateFlow(getPlayerStatus(controller))
+
+    val controller = MutableStateFlow<MediaController?>(null)
+    val mediaItemFlow = MutableStateFlow<MediaItem?>(null)
+    val mediaPlayingFlow = MutableStateFlow<Boolean>(false)
+    val mediaStatusFlow = MutableStateFlow<String?>(null)
     val backgroundColor = MutableStateFlow(Color.White)
     val foregroundColor = MutableStateFlow(Color.Black)
     val controllerConnected = MutableStateFlow(false)
@@ -38,41 +36,64 @@ class RadioControllerViewModel(
     private val imageLoader = ImageLoader.Builder(application).build() // Initialize ImageLoader
 
     init {
-        player.addListener(ControllerPlayerListener {
-            viewModelScope.launch {
-                mediaItemFlow.value = controller.currentMediaItem
-                mediaPlayingFlow.value = controller.isPlaying
-                mediaStatusFlow.value = getPlayerStatus(controller)
 
-                backgroundColor.value =
-                    getBackgroundColor(controller.currentMediaItem) ?: Color.White
+    }
+
+    fun setController(controller: MediaController?) {
+        this.controller.value = controller
+
+        controller?.let { c ->
+            viewModelScope.launch {
+                mediaItemFlow.value = c.currentMediaItem
+                mediaPlayingFlow.value = c.isPlaying
+                mediaStatusFlow.value = getPlayerStatus(c)
+                backgroundColor.value = getBackgroundColor(c.currentMediaItem) ?: Color.White
                 foregroundColor.value = getComplementaryColor(backgroundColor.value)
+                controllerConnected.value = c.isConnected
             }
-        })
-        controller.addListener(object : Player.Listener {
-            override fun onEvents(player: Player, events: Player.Events) {
+
+            controller.addListener(ControllerPlayerListener {
                 viewModelScope.launch {
-                    controllerConnected.value = controller.isConnected
+                    mediaItemFlow.value = controller.currentMediaItem
+                    mediaPlayingFlow.value = controller.isPlaying
+                    mediaStatusFlow.value = getPlayerStatus(controller)
+                    backgroundColor.value =
+                        getBackgroundColor(controller.currentMediaItem) ?: Color.White
+                    foregroundColor.value = getComplementaryColor(backgroundColor.value)
                 }
-            }
-        })
+            })
+            controller.addListener(object : Player.Listener {
+                override fun onEvents(player: Player, events: Player.Events) {
+                    viewModelScope.launch {
+                        controllerConnected.value = controller.isConnected
+                    }
+                }
+            })
+        }
     }
 
     fun onPlayPause() {
         viewModelScope.launch {
-            if (controller.isPlaying) {
-                controller.pause()
-            } else {
-                controller.play()
+            controller.value?.let { c ->
+                if (!c.isConnected) {
+                    throw IllegalStateException("Controller is not connected")
+                }
+                if (c.isPlaying) {
+                    c.pause()
+                } else {
+                    c.play()
+                }
             }
         }
     }
 
     fun onSetRating(fav: Boolean) {
         viewModelScope.launch {
-            controller.currentMediaItem?.let { item ->
-                controller.setRating(HeartRating(fav)).get()
-                reloadEventFlow.emit(ReloadEvent(item.mediaId))
+            controller.value?.let { c ->
+                c.currentMediaItem?.let { item ->
+                    c.setRating(HeartRating(fav)).get()
+                    reloadEventFlow.emit(ReloadEvent(item.mediaId))
+                }
             }
         }
     }
@@ -140,22 +161,6 @@ class ControllerPlayerListener(
     override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
         super.onMediaMetadataChanged(mediaMetadata)
         callback.invoke()
-    }
-}
-
-class RadioControllerViewModelFactory(
-    private val application: Application,
-    // Add other arguments needed for your ViewModel constructor
-    private val player: Player,
-    private val controller: MediaController
-) : ViewModelProvider.Factory {
-
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(RadioControllerViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return RadioControllerViewModel(application, player, controller) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
 

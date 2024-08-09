@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,8 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.MediaController
@@ -40,23 +38,18 @@ import androidx.navigation.compose.rememberNavController
 import com.charlyghislain.openopenradio.service.OpenOpenRadioPlaybackServiceOpenOpenRadio
 import com.charlyghislain.openopenradio.ui.components.MyPlayerView
 import com.charlyghislain.openopenradio.ui.components.RadioControllerViewModel
-import com.charlyghislain.openopenradio.ui.components.RadioControllerViewModelFactory
 import com.charlyghislain.openopenradio.ui.model.MainViewModel
 import com.charlyghislain.openopenradio.ui.model.NestedNavState
 import com.charlyghislain.openopenradio.ui.theme.OpenOpenRadioTheme
-import com.google.common.util.concurrent.Futures.immediateFuture
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.collect
 
 class HomeFragment : Fragment() {
 
-    private val sessionTokenReference: MutableState<SessionToken?> = mutableStateOf(null)
+    private lateinit var token: SessionToken
     private lateinit var mainViewModel: MainViewModel
+    private lateinit var radioViewModel: RadioControllerViewModel
 
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var browserFuture: ListenableFuture<MediaBrowser>? = null
@@ -66,12 +59,14 @@ class HomeFragment : Fragment() {
     override fun onStart() {
         super.onStart()
         val context = requireContext();
-        sessionTokenReference.value =
-            SessionToken(
-                context,
-                ComponentName(context, OpenOpenRadioPlaybackServiceOpenOpenRadio::class.java)
-            )
+
         mainViewModel = ViewModelProvider(requireActivity()).get(MainViewModel::class.java)
+        radioViewModel =
+            ViewModelProvider(requireActivity()).get(RadioControllerViewModel::class.java)
+        token = SessionToken(
+            context,
+            ComponentName(context, OpenOpenRadioPlaybackServiceOpenOpenRadio::class.java)
+        )
 
         if (
             Build.VERSION.SDK_INT >= 33 &&
@@ -84,6 +79,7 @@ class HomeFragment : Fragment() {
                 0
             )
         }
+
     }
 
     override fun onStop() {
@@ -93,42 +89,69 @@ class HomeFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         val context = requireContext();
-
-        sessionTokenReference.value?.let { token ->
-            controllerFuture = MediaController.Builder(context, token)
-                .buildAsync()
-            browserFuture = MediaBrowser.Builder(context, token)
-                .buildAsync()
-
-            controllerFuture?.let { future ->
-                future.addListener({
-                    try {
-                        controller.value = future.get()
-                    } catch (e: Exception) {
-                        controller.value = null
-                    }
-                }, MoreExecutors.directExecutor())
-            }
-            browserFuture?.let { future ->
-                future.addListener({
-                    try {
-                        browser.value = future.get()
-                    } catch (e: Exception) {
-                        browser.value = null
-                    }
-                }, MoreExecutors.directExecutor())
-            }
-        }
+        radioViewModel.setController(controller.value)
+        reconnectMedia(context, token)
     }
 
     override fun onPause() {
         super.onPause()
-        controllerFuture?.let { MediaController.releaseFuture(it) }
-        browserFuture?.let { MediaBrowser.releaseFuture(it) }
+        disconnectController()
+        disconnectBrowser()
     }
 
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
+    private fun reconnectMedia(
+        context: Context,
+        token: SessionToken
+    ) {
+        reconnectController(context, token)
+        reconnectBrowser(context, token)
+    }
+
+    private fun reconnectController(
+        context: Context,
+        token: SessionToken
+    ) {
+//        disconnectController()
+        controllerFuture = MediaController.Builder(context, token)
+            .buildAsync()
+        controllerFuture!!.addListener({
+            try {
+                controller.value = controllerFuture?.get()
+            } catch (e: Exception) {
+                controller.value = null
+            }
+            radioViewModel.setController(controller.value)
+        }, ContextCompat.getMainExecutor(context))
+    }
+
+    private fun disconnectController() {
+        controllerFuture?.let {
+            MediaController.releaseFuture(it)
+        }
+        controller.value = null
+    }
+
+    private fun reconnectBrowser(
+        context: Context,
+        token: SessionToken
+    ) {
+//        disconnectBrowser()
+        browserFuture = MediaBrowser.Builder(context, token)
+            .buildAsync()
+        browserFuture!!.addListener({
+            try {
+                browser.value = browserFuture?.get()
+            } catch (e: Exception) {
+                browser.value = null
+            }
+        }, ContextCompat.getMainExecutor(context))
+    }
+
+    private fun disconnectBrowser() {
+        browserFuture?.let {
+            MediaBrowser.releaseFuture(it)
+        }
+        browser.value = null
     }
 
 
@@ -145,33 +168,10 @@ class HomeFragment : Fragment() {
                 OpenOpenRadioTheme {
                     val nestedNavController = rememberNavController() // For the Compose NavHost
                     mainViewModel.nestedNavigationUpHandler = { nestedNavController.navigateUp() }
-
-                    var viewModel: RadioControllerViewModel? by remember {
-                        mutableStateOf(null)
-                    }
-                    var mediaBrowser by remember { browser }
-
-                    LaunchedEffect(controller.value) {
-                        val controller = controller.value
-                        if (controller != null) {
-                            val newViewModel: RadioControllerViewModel by viewModels(
-                                factoryProducer = {
-                                    RadioControllerViewModelFactory(
-                                        requireActivity().application,
-                                        controller,
-                                        controller
-                                    )
-                                }
-                            )
-                            viewModel = newViewModel
-                        } else {
-                            viewModel = null
-                        }
-                    }
-
+                    val mediaBrowser by remember { browser }
 
                     HomePageContent(
-                        viewModel,
+                        radioViewModel,
                         mediaBrowser,
                         nestedNavState = mainViewModel.nestedNavState,
                         navController = nestedNavController,
@@ -181,22 +181,25 @@ class HomeFragment : Fragment() {
         }
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-    }
-
 }
 
 
 @Composable
 fun HomePageContent(
-    viewModel: RadioControllerViewModel?,
+    viewModel: RadioControllerViewModel,
     browser: MediaBrowser?,
     nestedNavState: MutableStateFlow<NestedNavState>,
     navController: NavHostController,
 ) {
-    viewModel?.let { model ->
-        Column(modifier = Modifier.fillMaxSize()) {
+    var controller by remember {
+        mutableStateOf(viewModel.controller.value)
+    }
+    LaunchedEffect(key1 = viewModel.controller) {
+        viewModel.controller.collect { c -> controller = c }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        controller?.let { controller ->
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -205,26 +208,19 @@ fun HomePageContent(
                 contentAlignment = Alignment.Center
             ) {
                 MyPlayerView(
-                    viewModel = model
+                    viewModel = viewModel
                 )
             }
 
             browser?.let { mediaBrowser ->
                 Navigation(
                     browser = mediaBrowser,
-                    controller = viewModel.controller,
+                    controller = controller,
                     navController = navController,
                     nestedNavState = nestedNavState,
                     reloadEventFlow = viewModel.reloadEventFlow
                 )
             }
-        }
-    } ?: run {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = "No Media Controller")
         }
     }
 }

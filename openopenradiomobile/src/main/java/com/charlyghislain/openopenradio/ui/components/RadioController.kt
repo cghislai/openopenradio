@@ -116,7 +116,7 @@ fun MyPlayerView(
                             horizontalArrangement = Arrangement.aligned(Alignment.End)
                         ) {
                             Text(
-                                text = status,
+                                text = status ?: "",
                                 color = foregroundColor,
                                 modifier = Modifier
                                     .padding(8.dp),

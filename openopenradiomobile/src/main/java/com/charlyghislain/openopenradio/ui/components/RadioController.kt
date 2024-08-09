@@ -1,7 +1,5 @@
 package com.charlyghislain.openopenradio.ui.components
 
-import android.graphics.Bitmap
-import android.graphics.drawable.BitmapDrawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,127 +16,48 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.HeartRating
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
-import androidx.media3.common.PlaybackException
-import androidx.media3.common.Player
-import androidx.media3.session.MediaController
-import androidx.palette.graphics.Palette
 import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
-import coil.request.ImageRequest
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.charlyghislain.openopenradio.R
+import com.charlyghislain.openopenradio.ui.home.ReloadEvent
+import kotlinx.coroutines.flow.MutableSharedFlow
 
 
 @Composable
 fun MyPlayerView(
-    player: Player,
-    controller: MediaController,
-    onSetRating: (MediaItem, Boolean) -> Unit,
+    viewModel: RadioControllerViewModel,
 ) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
+    val status by viewModel.mediaStatusFlow.collectAsState()
+    val mediaItem by viewModel.mediaItemFlow.collectAsState()
+    val playing by viewModel.mediaPlayingFlow.collectAsState()
+    val backgroundColor by viewModel.backgroundColor.collectAsState()
+    val foregroundColor by viewModel.foregroundColor.collectAsState()
+    val connected by viewModel.controllerConnected.collectAsState()
 
-    var mediaItem: MediaItem? by remember {
-        mutableStateOf(controller.currentMediaItem)
-    }
-    var mediaPlaying: Boolean? by remember {
-        mutableStateOf(controller.isPlaying)
-    }
-    var mediaStatus: String? by remember {
-        mutableStateOf(getPlayerStatus(controller))
-    }
-    player.addListener(
-        ControllerPlayerListener(
-            { _ ->
-                coroutineScope.launch { // Launch a coroutine
-                    mediaItem = controller.currentMediaItem
-                    mediaPlaying = controller.isPlaying
-                    mediaStatus = getPlayerStatus(controller)
-                }
-            }, player
-        )
-    )
-
-
-    var playerViewState: PlayerViewState? by remember {
-        mutableStateOf(null)
-    }
-
-    mediaItem?.let { item ->
-        val imageUri = item.mediaMetadata.artworkUri
-        val painterR = rememberAsyncImagePainter(
-            model = imageUri,
-            contentScale = ContentScale.Fit
-        )
-        painterR.let { painter ->
-            var background = Color.White// Default color
-            var foreground = Color.Black // Default color
-
-            coroutineScope.launch { // Use coroutineScope.launch
-                val image = painter.imageLoader.execute(
-                    ImageRequest.Builder(context)
-                        .data(imageUri)
-                        .build()
-                ).drawable
-                if (image is BitmapDrawable) {
-                    val softwareBitmap = image.bitmap.copy(Bitmap.Config.ARGB_8888, true)
-
-                    val palette = Palette.from(softwareBitmap).generate()
-                    background = Color(palette.getLightVibrantColor(Color.White.toArgb()))
-                    foreground = getComplementaryColor(background)
-                }
-                withContext(Dispatchers.Main) {
-                    val state = PlayerViewState(
-                        background,
-                        foreground,
-                    )
-                    playerViewState = state
-                }
-            }
-        }
-    } ?: run {
-        val state = PlayerViewState(
-            Color.White,
-            Color.Black,
-        )
-        playerViewState = state
-    }
-
-
-    playerViewState?.let { state ->
+    if (connected) {
         mediaItem?.let { item ->
-            val itemRatin = item.mediaMetadata.userRating as HeartRating;
+            val itemRating = item.mediaMetadata.userRating as HeartRating;
 
             Box(modifier = Modifier.fillMaxSize()) {
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
                         .align(Alignment.CenterEnd)
-                        .background(playerViewState!!.backgroundColor)
+                        .background(backgroundColor)
                 ) {
                     AsyncImage(
                         item.mediaMetadata.artworkUri,
@@ -154,85 +73,70 @@ fun MyPlayerView(
                         .fillMaxHeight()
                         .fillMaxWidth()
                 ) {
-                    mediaPlaying?.let { playing ->
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        Text(
+                            text = mediaItem?.mediaMetadata?.title.toString(),
+                            color = foregroundColor,
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .fillMaxWidth(),
+                            softWrap = false,
+                            style = TextStyle(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 24.sp,
+                                background = backgroundColor.copy(alpha = 0.8f)
+                            ),
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.aligned(Alignment.End)
                         ) {
-                            Text(
-                                text = mediaItem?.mediaMetadata?.title.toString(),
-                                color = state.foregroundColor,
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .fillMaxWidth(),
-                                softWrap = false,
-                                style = TextStyle(
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 24.sp,
-                                    background = state.backgroundColor.copy(alpha = 0.8f)
-                                ),
+                            PlayPauseIcon(
+                                isPlaying = playing,
+                                color = foregroundColor,
+                                onPlayPauseClick = { viewModel.onPlayPause() }
                             )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.aligned(Alignment.End)
-                            ) {
-                                PlayPauseIcon(
-                                    isPlaying = playing,
-                                    color = state.foregroundColor,
-                                    onPlayPauseClick = {
-                                        if (controller.isPlaying) {
-                                            controller.pause()
-                                        } else {
-                                            controller.play()
-                                        }
-                                    }
-                                )
-                                BinaryHeartRating(
-                                    isFavorite = itemRatin.isHeart == true, // Pass the current favorite status
-                                    onToggleFavorite = {
-                                        val newStatus = itemRatin.isHeart == false
-                                        onSetRating(item, newStatus)
-                                    },
-                                    color = state.foregroundColor
-                                )
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.aligned(Alignment.End)
-                            ) {
-                                mediaStatus?.let { status ->
-                                    Text(
-                                        text = status,
-                                        color = state.foregroundColor,
-                                        modifier = Modifier
-                                            .padding(8.dp),
-                                        style = TextStyle(
-                                            fontSize = 14.sp,
-                                            background = state.backgroundColor.copy(alpha = 0.8f)
-                                        ),
-                                    )
-                                }
-                            }
-
+                            BinaryHeartRating(
+                                isFavorite = itemRating.isHeart, // Pass the current favorite status
+                                onToggleFavorite = {
+                                    val newStatus = !itemRating.isHeart
+                                    viewModel.onSetRating(newStatus)
+                                },
+                                color = foregroundColor
+                            )
                         }
 
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.aligned(Alignment.End)
+                        ) {
+                            Text(
+                                text = status,
+                                color = foregroundColor,
+                                modifier = Modifier
+                                    .padding(8.dp),
+                                style = TextStyle(
+                                    fontSize = 14.sp,
+                                    background = backgroundColor.copy(alpha = 0.8f)
+                                ),
+                            )
+                        }
                     }
-
-
-                    // Your other content here, using playerViewState.foregroundColor for text color, etc.
                 }
             }
         } ?: run {
             Text(
-                text = "No item",
+                text = stringResource(R.string.player_empty_label),
                 style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 18.sp)
             )
         }
-    } ?: run {
-        CircularProgressIndicator()
+    } else {
+        Text(text = "Disconnected")
     }
 }
 
@@ -279,74 +183,5 @@ fun BinaryHeartRating(
     }
 }
 
-fun getPlayerStatus(controller: MediaController): String? {
-    val connected = controller.isConnected
-    if (!connected) {
-        return "Disconnected"
-    }
-
-    val error = controller.playerError
-    if (error != null) {
-        return "Error: ${error.message}"
-    }
-
-    controller.currentMediaItem ?: return "Stopped"
-    val bufferSize = controller.totalBufferedDuration
-    if (bufferSize < 100) {
-        return "Buffering"
-    }
-    val playing = controller.isPlaying
-    if (!playing) {
-        return "Paused"
-    }
 
 
-    return "Playing"
-}
-
-class ControllerPlayerListener(
-    private val callback: (MediaItem?) -> Unit,
-    val player: Player,
-) :
-    Player.Listener {
-
-    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-        super.onMediaItemTransition(mediaItem, reason)
-        callback.invoke(mediaItem)
-    }
-
-    override fun onIsPlayingChanged(isPlaying: Boolean) {
-        super.onIsPlayingChanged(isPlaying)
-        callback.invoke(player.currentMediaItem)
-    }
-
-    override fun onPlayerError(error: PlaybackException) {
-        super.onPlayerError(error)
-        callback.invoke(player.currentMediaItem)
-    }
-
-    override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-        super.onMediaMetadataChanged(mediaMetadata)
-        callback.invoke(player.currentMediaItem)
-    }
-
-}
-
-data class PlayerViewState(
-    val backgroundColor: Color,
-    val foregroundColor: Color,
-)
-
-// For Color objects
-fun getComplementaryColor(color: Color): Color {
-    val red = (255 - color.red * 255).coerceIn(0F, 255F).toInt()
-    val green = (255 - color.green * 255).coerceIn(0F, 255F).toInt()
-    val blue = (255 - color.blue * 255).coerceIn(0F, 255F).toInt()
-    return Color(red, green, blue)
-}
-
-// For integer (ARGB) color values
-fun getComplementaryColor(colorInt: Int): Color {
-    val color = Color(colorInt) // Convert integer to Color object
-    return getComplementaryColor(color) // Call the Color version
-}

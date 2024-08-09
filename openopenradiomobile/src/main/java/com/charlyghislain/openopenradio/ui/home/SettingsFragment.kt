@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -22,12 +23,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.charlyghislain.openopenradio.service.radio.settings.Settings
 import com.charlyghislain.openopenradio.service.radio.settings.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.debounce
 
 @AndroidEntryPoint
 class SettingsFragment : Fragment() {
@@ -51,15 +54,14 @@ class SettingsFragment : Fragment() {
 
 @Composable
 fun SettingsFragmentScreen(viewModel: SettingsViewModel) {
-    val settings by viewModel.settingsFlow.collectAsState(initial = Settings())
+    val settings by viewModel.settingsFlow
+        .collectAsState(initial = Settings())
 
     SettingsScreen(
         settings = settings,
         onSettingChanged = { updatedSettings ->
             viewModel.saveSettings(updatedSettings)
         },
-        onSave = {
-        }
     )
 }
 
@@ -67,89 +69,100 @@ fun SettingsFragmentScreen(viewModel: SettingsViewModel) {
 fun SettingsScreen(
     settings: Settings,
     onSettingChanged: (Settings) -> Unit,
-    onSave: () -> Unit
 ) {
-    var connectTimeout by remember { mutableStateOf(settings.connectTimeoutMs.toString()) }
-    var readTimeout by remember { mutableStateOf(settings.readTimeoutMs.toString()) }
-    var liveTargetOffsetMs by remember { mutableStateOf(settings.liveTargetOffsetMs.toString()) }
-    var fallbackMaxPlaybackSpeed by remember { mutableStateOf(settings.fallbackMaxPlaybackSpeed.toString()) }
-    var fallbackMinPlaybackSpeed by remember { mutableStateOf(settings.fallbackMinPlaybackSpeed.toString()) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        SettingsIntInput(connectTimeout, "Connect Timeout (ms)",
+        SettingsIntInput(settings.connectTimeoutMs, "Connect Timeout (ms)",
             onSettingsChange = onSettingChanged,
             settingsCloneFactory = { value ->
                 settings.copy(
-                    connectTimeoutMs = value.toIntOrNull() ?: settings.connectTimeoutMs
+                    connectTimeoutMs = value ?: settings.connectTimeoutMs
                 )
             })
         Spacer(modifier = Modifier.height(8.dp))
-        SettingsIntInput(readTimeout, "Read Timeout (ms)",
+        SettingsIntInput(settings.readTimeoutMs, "Read Timeout (ms)",
             onSettingsChange = onSettingChanged,
             settingsCloneFactory = { value ->
                 settings.copy(
-                    readTimeoutMs = value.toIntOrNull() ?: settings.readTimeoutMs
+                    readTimeoutMs = value ?: settings.readTimeoutMs
                 )
             })
         Spacer(modifier = Modifier.height(8.dp))
-        SettingsIntInput(liveTargetOffsetMs, "Live Target Offset (ms)",
+        SettingsIntInput(settings.liveTargetOffsetMs, "Live Target Offset (ms)",
             onSettingsChange = onSettingChanged,
             settingsCloneFactory = { value ->
                 settings.copy(
-                    liveTargetOffsetMs = value.toIntOrNull() ?: settings.liveTargetOffsetMs
+                    liveTargetOffsetMs = value ?: settings.liveTargetOffsetMs
                 )
             })
         Spacer(modifier = Modifier.height(8.dp))
-        SettingsIntInput(fallbackMaxPlaybackSpeed, "Fallback Max Playback Speed",
+        SettingsFloatInput(settings.fallbackMaxPlaybackSpeed,
+            "Fallback Max Playback Speed",
             onSettingsChange = onSettingChanged,
             settingsCloneFactory = { value ->
                 settings.copy(
-                    fallbackMaxPlaybackSpeed = value.toFloatOrNull()
-                        ?: settings.fallbackMaxPlaybackSpeed
+                    fallbackMaxPlaybackSpeed = value ?: settings.fallbackMaxPlaybackSpeed
                 )
             })
         Spacer(modifier = Modifier.height(8.dp))
-        SettingsIntInput(fallbackMinPlaybackSpeed, "Fallback Min Playback Speed",
+        SettingsFloatInput(settings.fallbackMinPlaybackSpeed,
+            "Fallback Min Playback Speed",
             onSettingsChange = onSettingChanged,
             settingsCloneFactory = { value ->
                 settings.copy(
-                    fallbackMinPlaybackSpeed = value.toFloatOrNull()
-                        ?: settings.fallbackMinPlaybackSpeed
+                    fallbackMinPlaybackSpeed = value ?: settings.fallbackMinPlaybackSpeed
                 )
             })
-
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = {
-                onSave()
-            },
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        ) {
-            Text("Save Settings")
-        }
     }
 }
 
 @Composable
 private fun SettingsIntInput(
-    value: String,
+    value: Int,
     label: String,
     onSettingsChange: (Settings) -> Unit,
-    settingsCloneFactory: (String) -> Settings,
+    settingsCloneFactory: (Int?) -> Settings,
 ) {
-    var valueRemember by remember { mutableStateOf(value) }
+    var localValue by remember(value) { mutableStateOf(value.toString()) }
 
     OutlinedTextField(
-        value = valueRemember,
+        value = localValue,
         onValueChange = { newValue ->
-            val updatedSettings = settingsCloneFactory.invoke(newValue)
+            localValue = newValue
+            val intValue = newValue.toIntOrNull()
+            val updatedSettings = settingsCloneFactory.invoke(intValue)
             onSettingsChange(updatedSettings)
         },
         label = { Text(label) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+
+@Composable
+private fun SettingsFloatInput(
+    value: Float,
+    label: String,
+    onSettingsChange: (Settings) -> Unit,
+    settingsCloneFactory: (Float?) -> Settings,
+) {
+    var localValue by remember(value) { mutableStateOf(value.toBigDecimal().setScale(4).toString()) }
+
+    OutlinedTextField(
+        value = localValue,
+        onValueChange = { newValue ->
+            localValue = newValue
+            val floatValue = newValue.toFloatOrNull()
+            val updatedSettings = settingsCloneFactory.invoke(floatValue)
+            onSettingsChange(updatedSettings)
+        },
+        label = { Text(label) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth()
     )
 }

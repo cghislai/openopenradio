@@ -4,6 +4,14 @@
     <selectionStates>
       <SelectionState runConfigName="openopenradiomobile">
         <option name="selectionMode" value="DROPDOWN" />
+        <DropdownSelection timestamp="2024-08-08T20:07:13.824322231Z">
+          <Target type="DEFAULT_BOOT">
+            <handle>
+              <DeviceId pluginId="LocalEmulator" identifier="path=/home/cghislai/.android/avd/Pixel_2_API_29.avd" />
+            </handle>
+          </Target>
+        </DropdownSelection>
+        <DialogSelection />
       </SelectionState>
       <SelectionState runConfigName="openopenradioautomotive">
         <option name="selectionMode" value="DROPDOWN" />

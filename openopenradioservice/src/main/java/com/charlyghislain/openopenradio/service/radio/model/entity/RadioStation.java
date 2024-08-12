@@ -9,6 +9,7 @@ import androidx.room.TypeConverters;
 import com.charlyghislain.openopenradio.service.radio.util.StringListConverter;
 
 import java.util.List;
+import java.util.Objects;
 
 
 @Entity(tableName = "radio_station", primaryKeys = {"source", "sourceId"})
@@ -123,5 +124,18 @@ public class RadioStation {
 
     public void setLogoUri(String logoUri) {
         this.logoUri = logoUri;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RadioStation that = (RadioStation) o;
+        return source == that.source && Objects.equals(sourceId, that.sourceId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(source, sourceId);
     }
 }

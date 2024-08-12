@@ -166,7 +166,10 @@ fun MenuScreen(
 
 
     LazyColumn(modifier = Modifier.fillMaxWidth(1f)) {
-        items(lazyPagingItems.itemCount) { index ->
+        items(
+            count = lazyPagingItems.itemCount,
+            key = { index -> lazyPagingItems[index]?.mediaId.toString() },
+        ) { index ->
             val item = lazyPagingItems[index]
             item?.let {
                 ListMediaItem(item, navController, controller)

@@ -4,7 +4,6 @@ package com.charlyghislain.openopenradio.service.media;
 import com.charlyghislain.openopenradio.service.radio.repository.CountryRepository;
 import com.charlyghislain.openopenradio.service.radio.repository.GenreRepository;
 import com.charlyghislain.openopenradio.service.radio.repository.LanguageRepository;
-import com.charlyghislain.openopenradio.service.radio.repository.StationFavoritesRepository;
 import com.charlyghislain.openopenradio.service.radio.repository.StationRepository;
 
 import dagger.Module;
@@ -21,11 +20,10 @@ public class MediaModule {
             CountryRepository countryRepository,
             GenreRepository genreRepository,
             LanguageRepository languageRepository,
-            StationRepository stationRepository,
-            StationFavoritesRepository favoriteRepository
+            StationRepository stationRepository
     ) {
         return new MediaTreeService(countryRepository, genreRepository,
-                languageRepository, stationRepository,favoriteRepository);
+                languageRepository, stationRepository);
     }
 
 }

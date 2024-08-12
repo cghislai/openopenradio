@@ -25,7 +25,6 @@ class MediaTreeService(
     val genreRepository: GenreRepository,
     val languageRepository: LanguageRepository,
     val stationRepository: StationRepository,
-    val favoriteRepository: StationFavoritesRepository
 ) {
 
     companion object {
@@ -48,7 +47,6 @@ class MediaTreeService(
     }
 
     fun expandItem(item: MediaItem): ListenableFuture<MediaItem> {
-//        return item;
         val fullItemFuture = getItemById(item.mediaId)
 
         return Futures.transform(fullItemFuture, { fullItem ->

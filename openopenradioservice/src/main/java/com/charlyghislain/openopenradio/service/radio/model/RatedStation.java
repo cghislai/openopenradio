@@ -2,6 +2,8 @@ package com.charlyghislain.openopenradio.service.radio.model;
 
 import com.charlyghislain.openopenradio.service.radio.model.entity.RadioStation;
 
+import java.util.Objects;
+
 public class RatedStation {
 
     private RadioStation station;
@@ -18,5 +20,18 @@ public class RatedStation {
 
     public Boolean getFavorite() {
         return favorite;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RatedStation that = (RatedStation) o;
+        return Objects.equals(station, that.station);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(station);
     }
 }

@@ -9,13 +9,13 @@ plugins {
 
 android {
     namespace = "com.charlyghislain.openopenradio"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.charlyghislain.openopenradio"
         minSdk = 24
-        targetSdk = 34
-        versionCode = 2
+        targetSdk = 35
+        versionCode = 3
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

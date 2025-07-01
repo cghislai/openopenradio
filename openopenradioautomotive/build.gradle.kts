@@ -7,13 +7,13 @@ plugins {
 
 android {
     namespace = "com.charlyghislain.openopenradioautomotive"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.charlyghislain.openopenradioautomotive"
         minSdk = 28
-        targetSdk = 34
-        versionCode = 2
+        targetSdk = 35
+        versionCode = 3
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

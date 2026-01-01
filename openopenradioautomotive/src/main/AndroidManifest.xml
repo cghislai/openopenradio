@@ -21,7 +21,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <meta-data
         android:name="com.android.automotive"
@@ -53,7 +53,6 @@
                 tools:node="remove" />
         </provider>
 
-        <service android:name="com.charlyghislain.openopenradio.service.radio.RadioService" />
         <service
             android:name=".service.OpenOpenRadioAutomotivePlaybackServiceOpenOpenRadio"
             android:exported="true"

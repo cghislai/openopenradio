@@ -1,4 +1,4 @@
-package com.charlyghislain.openopenradioautomotive.service
+package com.charlyghislain.openopenradio.automotive.service
 
 import android.media.MediaSession2.ControllerInfo
 import androidx.annotation.OptIn
@@ -25,7 +25,7 @@ class OpenOpenRadioAutomotivePlaybackServiceOpenOpenRadio : OpenOpenRadioMediaPl
             override fun onGetLibraryRoot(
                 session: MediaLibrarySession,
                 browser: MediaSession.ControllerInfo,
-                params: MediaLibraryService.LibraryParams?
+                params: LibraryParams?
             ): ListenableFuture<LibraryResult<MediaItem>> {
                 var responseParams = params
                 if (session.isAutomotiveController(browser)) {

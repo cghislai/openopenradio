@@ -28,7 +28,7 @@
         android:resource="@xml/automotive_app_desc" />
 
     <application
-        android:name=".OpenOpenRadioAutomotiveApplication"
+        android:name="com.charlyghislain.openopenradio.automotive.OpenOpenRadioAutomotiveApplication"
         android:allowBackup="false"
         android:appCategory="audio"
         android:icon="@mipmap/ic_launcher"
@@ -54,7 +54,7 @@
         </provider>
 
         <service
-            android:name=".service.OpenOpenRadioAutomotivePlaybackServiceOpenOpenRadio"
+            android:name="com.charlyghislain.openopenradio.automotive.service.OpenOpenRadioAutomotivePlaybackServiceOpenOpenRadio"
             android:exported="true"
             android:foregroundServiceType="mediaPlayback">
             <intent-filter>

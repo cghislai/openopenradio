@@ -50,7 +50,7 @@ open class MediaSessionCallback(val service: OpenOpenRadioMediaPlaybackService) 
 
         val future = service.setFavorite(item?.mediaId, heart.isHeart)
         Futures.addCallback(future, object : FutureCallback<SessionResult> {
-            override fun onSuccess(result: SessionResult?) {
+            override fun onSuccess(result: SessionResult) {
                 if (item != null) {
                     Handler(Looper.getMainLooper()).post { // Use a Handler to post the update to the main thread
                         val updatedItem = item.buildUpon()
@@ -66,6 +66,7 @@ open class MediaSessionCallback(val service: OpenOpenRadioMediaPlaybackService) 
                     }
                 }
             }
+
 
             override fun onFailure(t: Throwable) {
                 Log.e("CustomMediaSessionCallback", "onFailure", t)

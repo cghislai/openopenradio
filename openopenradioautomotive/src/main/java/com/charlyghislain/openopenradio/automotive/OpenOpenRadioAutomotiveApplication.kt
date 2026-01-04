@@ -1,6 +1,5 @@
-package com.charlyghislain.openopenradioautomotive
+package com.charlyghislain.openopenradio.automotive
 
-import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.multidex.MultiDexApplication
 import androidx.work.Configuration

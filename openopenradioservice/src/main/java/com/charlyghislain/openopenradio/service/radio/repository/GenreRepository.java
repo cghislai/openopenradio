@@ -1,5 +1,7 @@
 package com.charlyghislain.openopenradio.service.radio.repository;
 
+import android.util.Log;
+
 import androidx.lifecycle.LiveData;
 
 import com.charlyghislain.openopenradio.service.radio.model.entity.RadioSource;
@@ -10,6 +12,7 @@ import com.charlyghislain.openopenradio.service.radio.model.entity.RadioGenre;
 import com.charlyghislain.openopenradio.service.util.RequestCallback;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -31,33 +34,41 @@ public class GenreRepository {
     }
 
 
-    public void fetchGenres() {
-        webRadioClient.getGenres(createAsyncCallback(value -> {
+    public CompletableFuture<Void> fetchGenres() {
+        CompletableFuture<Void> done = new CompletableFuture<>();
+        webRadioClient.getGenres(createAsyncCallback(done, value -> {
             List<RadioGenre> radioGenreList = value.stream()
                     .map(v -> new RadioGenre(RadioSource.WEBRADIOS, v))
                     .collect(Collectors.toList());
-            radioGenreDao.clearGenres(RadioSource.WEBRADIOS);
-            radioGenreDao.addGenres(radioGenreList);
+            radioGenreDao.replaceGenres(RadioSource.WEBRADIOS, radioGenreList);
         }));
+        return done;
     }
 
-    private <T> RequestCallback<T> createAsyncCallback(Consumer<T> onSuccess) {
+    private <T> RequestCallback<T> createAsyncCallback(CompletableFuture<Void> done, Consumer<T> onSuccess) {
         return new RequestCallback<T>() {
             @Override
             public void onSuccess(T value) {
                 new Thread(() -> {
-                    onSuccess.accept(value);
+                    try {
+                        onSuccess.accept(value);
+                        done.complete(null);
+                    } catch (RuntimeException e) {
+                        reportError(e);
+                        done.completeExceptionally(e);
+                    }
                 }).start();
             }
 
             @Override
             public void onError(Throwable error) {
                 reportError(error);
+                done.completeExceptionally(error);
             }
         };
     }
 
     private void reportError(Throwable error) {
-
+        Log.w("GenreRepository", "Error fetching content", error);
     }
 }

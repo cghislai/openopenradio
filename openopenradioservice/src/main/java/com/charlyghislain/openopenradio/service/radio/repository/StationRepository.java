@@ -20,6 +20,7 @@ import com.charlyghislain.openopenradio.service.util.RequestCallback;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -78,14 +79,15 @@ public class StationRepository {
         return getRatedStations(radioStationDao.getAllStationsFavorites());
     }
 
-    public void fetchStations() {
-        webRadioClient.getStations(createAsyncCallback(value -> {
+    public CompletableFuture<Void> fetchStations() {
+        CompletableFuture<Void> done = new CompletableFuture<>();
+        webRadioClient.getStations(createAsyncCallback(done, value -> {
             List<RadioStation> radioLanguageList = value.stream()
                     .map(this::createRadioStation)
                     .collect(Collectors.toList());
-            radioStationDao.clearStations(RadioSource.WEBRADIOS);
-            radioStationDao.addStations(radioLanguageList);
+            radioStationDao.replaceStations(RadioSource.WEBRADIOS, radioLanguageList);
         }));
+        return done;
     }
 
     private RadioStation createRadioStation(WebRadioStation webRadioStation) {
@@ -155,18 +157,25 @@ public class StationRepository {
         return new RatedStation(station, fav);
     }
 
-    private <T> RequestCallback<T> createAsyncCallback(Consumer<T> onSuccess) {
+    private <T> RequestCallback<T> createAsyncCallback(CompletableFuture<Void> done, Consumer<T> onSuccess) {
         return new RequestCallback<T>() {
             @Override
             public void onSuccess(T value) {
                 new Thread(() -> {
-                    onSuccess.accept(value);
+                    try {
+                        onSuccess.accept(value);
+                        done.complete(null);
+                    } catch (RuntimeException e) {
+                        reportError(e);
+                        done.completeExceptionally(e);
+                    }
                 }).start();
             }
 
             @Override
             public void onError(Throwable error) {
                 reportError(error);
+                done.completeExceptionally(error);
             }
         };
     }

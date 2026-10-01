@@ -70,10 +70,13 @@ class HomeFragment : Fragment() {
 
         if (
             Build.VERSION.SDK_INT >= 33 &&
+            !mainViewModel.notificationPermissionRequested &&
             context.checkSelfPermission(
                 Manifest.permission.POST_NOTIFICATIONS
             ) != PackageManager.PERMISSION_GRANTED
         ) {
+            // Ask once per app session rather than on every return to the home screen.
+            mainViewModel.notificationPermissionRequested = true
             requestPermissions(
                 arrayOf(Manifest.permission.POST_NOTIFICATIONS), /* requestCode= */
                 0

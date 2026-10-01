@@ -10,6 +10,7 @@ import com.charlyghislain.openopenradio.service.radio.repository.LanguageReposit
 import com.charlyghislain.openopenradio.service.radio.repository.StationRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.future.await
 
 @HiltWorker
 class ContentFetchWorker
@@ -26,10 +27,10 @@ constructor(
 
     override suspend fun doWork(): Result {
         return try {
-            genreRepository.fetchGenres()
-            countryRepository.fetchCountries()
-            languageRepository.fetchLanguages()
-            stationRepository.fetchStations()
+            genreRepository.fetchGenres().await()
+            countryRepository.fetchCountries().await()
+            languageRepository.fetchLanguages().await()
+            stationRepository.fetchStations().await()
 
             Result.success()
         } catch (e: Exception) {

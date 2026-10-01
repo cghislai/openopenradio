@@ -4,6 +4,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.lifecycle.map
+import androidx.media3.common.C
 import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Rating
@@ -155,14 +156,20 @@ open class MediaSessionCallback(val service: OpenOpenRadioMediaPlaybackService) 
         controller: MediaSession.ControllerInfo,
         isForPlayback: Boolean,
     ): ListenableFuture<MediaItemsWithStartPosition> {
+        // Live streams: always resume at the live edge.
         val currentItem = mediaSession.player.currentMediaItem
-        val currentPosition = mediaSession.player.currentPosition
-        return Futures.immediateFuture(
-            MediaItemsWithStartPosition(
-                listOfNotNull(currentItem),
-                0,
-                currentPosition
+        if (currentItem != null) {
+            return Futures.immediateFuture(
+                MediaItemsWithStartPosition(listOf(currentItem), 0, C.TIME_UNSET)
             )
+        }
+        // Fresh service (e.g. Android Auto or the system resuming after process death): the player is empty.
+        val lastMediaId = service.lastPlayedMediaId
+            ?: return Futures.immediateFailedFuture(UnsupportedOperationException("Nothing to resume"))
+        val lastItem = service.treeService.expandItem(MediaItem.Builder().setMediaId(lastMediaId).build())
+        return Futures.transform(
+            lastItem, { item -> MediaItemsWithStartPosition(listOf(item), 0, C.TIME_UNSET) },
+            MoreExecutors.directExecutor()
         )
     }
 

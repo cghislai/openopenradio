@@ -5,6 +5,7 @@ import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.Transaction;
 
 import com.charlyghislain.openopenradio.service.radio.model.entity.RadioSource;
 import com.charlyghislain.openopenradio.service.radio.model.entity.RadioStation;
@@ -20,6 +21,13 @@ public interface RadioStationDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void addStations(Collection<RadioStation> stations);
+
+    // Atomic, so readers never observe the table between the delete and the insert.
+    @Transaction
+    default void replaceStations(RadioSource source, Collection<RadioStation> stations) {
+        clearStations(source);
+        addStations(stations);
+    }
 
     @Query("SELECT * FROM radio_station ORDER BY name ASC")
     LiveData<List<RadioStation>> getAllStations();

@@ -198,7 +198,11 @@ class MediaTreeService(
         val future = stationRepository.findStationById(stationId.source, stationId.sourceId)
             .asListenableFuture()
         return Futures.transform(
-            future, { station -> buildStationItem(station) },
+            future, { station ->
+                // Room emits null when the station no longer exists, e.g. removed upstream since it was played.
+                if (station?.station == null) throw NoSuchElementException("Unknown station $id")
+                buildStationItem(station)
+            },
             MoreExecutors.directExecutor()
         )
     }

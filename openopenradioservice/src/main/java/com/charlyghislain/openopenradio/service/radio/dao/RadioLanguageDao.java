@@ -5,6 +5,7 @@ import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.Transaction;
 
 import com.charlyghislain.openopenradio.service.radio.model.LanguageWithStats;
 import com.charlyghislain.openopenradio.service.radio.model.entity.RadioLanguage;
@@ -24,6 +25,13 @@ public interface RadioLanguageDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void addLanguages(Collection<RadioLanguage> languages);
+
+    // Atomic, so readers never observe the table between the delete and the insert.
+    @Transaction
+    default void replaceLanguages(RadioSource source, Collection<RadioLanguage> languages) {
+        clearLanguages(source);
+        addLanguages(languages);
+    }
 
     @Query("WITH LanguageWithStats AS (\n" +
             "            SELECT g.name AS name,\n" +

@@ -7,12 +7,16 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.datastore.core.DataStore
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -41,6 +45,8 @@ open class OpenOpenRadioMediaPlaybackService : MediaSessionService() {
     companion object {
         private const val NOTIFICATION_ID = 123
         private const val CHANNEL_ID = "session_notification_channel_id"
+        private const val PLAYBACK_PREFS = "playback"
+        private const val KEY_LAST_MEDIA_ID = "last_media_id"
     }
 
 
@@ -102,8 +108,7 @@ open class OpenOpenRadioMediaPlaybackService : MediaSessionService() {
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .setUsage(C.USAGE_MEDIA)
             .setAllowedCapturePolicy(C.ALLOW_CAPTURE_BY_ALL)
-            .setFlags(C.FLAG_AUDIBILITY_ENFORCED)
-            .build();
+            .build()
 
         val httpDatasource = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
@@ -112,6 +117,8 @@ open class OpenOpenRadioMediaPlaybackService : MediaSessionService() {
         val player = ExoPlayer.Builder(this)
             .setAudioAttributes(audioAttributes, true)
             .setHandleAudioBecomingNoisy(true)
+            // Keeps CPU and Wi-Fi awake while streaming with the screen off.
+            .setWakeMode(C.WAKE_MODE_NETWORK)
             .setMediaSourceFactory(
                 DefaultMediaSourceFactory(httpDatasource)
                     .setLiveTargetOffsetMs(settings.liveTargetOffsetMs.toLong())
@@ -124,6 +131,11 @@ open class OpenOpenRadioMediaPlaybackService : MediaSessionService() {
             )
             .build()
         player.addListener(PlayerListener(player))
+        player.addListener(object : Player.Listener {
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                mediaItem?.mediaId?.let { lastPlayedMediaId = it }
+            }
+        })
 
 
         mediaSession = MediaLibrarySession.Builder(this, player, createLibrarySessionCallback())
@@ -135,7 +147,7 @@ open class OpenOpenRadioMediaPlaybackService : MediaSessionService() {
 
     // The user dismissed the app from the recent tasks
     override fun onTaskRemoved(rootIntent: Intent?) {
-        val player = mediaSession?.player!!
+        val player = mediaSession?.player ?: return stopSelf()
         if (!player.playWhenReady
             || player.mediaItemCount == 0
             || player.playbackState == Player.STATE_ENDED
@@ -215,6 +227,15 @@ open class OpenOpenRadioMediaPlaybackService : MediaSessionService() {
         notificationManagerCompat.createNotificationChannel(channel)
     }
 
+    /** Media id of the last played station, kept across process deaths for playback resumption. */
+    var lastPlayedMediaId: String?
+        get() = getSharedPreferences(PLAYBACK_PREFS, MODE_PRIVATE).getString(KEY_LAST_MEDIA_ID, null)
+        private set(value) {
+            getSharedPreferences(PLAYBACK_PREFS, MODE_PRIVATE).edit()
+                .putString(KEY_LAST_MEDIA_ID, value)
+                .apply()
+        }
+
     fun setFavorite(mediaId: String?, heart: Boolean): ListenableFuture<SessionResult> {
         val settableFuture = SettableFuture.create<SessionResult>()
 
@@ -243,15 +264,43 @@ open class OpenOpenRadioMediaPlaybackService : MediaSessionService() {
 
 @UnstableApi
 class PlayerListener(val player: ExoPlayer) : Player.Listener {
+    companion object {
+        private const val MAX_NETWORK_RETRIES = 20
+        private const val MAX_RETRY_DELAY_MS = 10_000L
+    }
+
+    private val handler = Handler(Looper.getMainLooper())
+    private var networkRetries = 0
+
+    override fun onPlaybackStateChanged(playbackState: Int) {
+        if (playbackState == Player.STATE_READY) {
+            networkRetries = 0
+        }
+    }
 
     override fun onPlayerError(error: PlaybackException) {
         if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
             // Re-initialize player at the live edge.
             player.seekToDefaultPosition()
             player.prepare()
+        } else if (isNetworkError(error) && networkRetries < MAX_NETWORK_RETRIES) {
+            // Streams drop on network handovers (screen off, tunnels, wifi to mobile): reconnect with backoff.
+            networkRetries++
+            val delayMs = (networkRetries * 1000L).coerceAtMost(MAX_RETRY_DELAY_MS)
+            handler.postDelayed({
+                if (player.playerError != null && player.playWhenReady) {
+                    player.seekToDefaultPosition()
+                    player.prepare()
+                }
+            }, delayMs)
         } else {
-            super.onPlayerError(error)
+            Log.w("PlayerListener", "Playback error", error)
         }
+    }
+
+    private fun isNetworkError(error: PlaybackException): Boolean {
+        return error.errorCode in PlaybackException.ERROR_CODE_IO_UNSPECIFIED..PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT
+                || error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT
     }
 }
 

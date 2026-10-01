@@ -13,6 +13,8 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,16 +41,14 @@ import androidx.paging.PagingState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
 import com.charlyghislain.openopenradio.R
+import com.charlyghislain.openopenradio.ui.components.awaitResult
 import com.charlyghislain.openopenradio.ui.model.NestedNavState
-import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 private const val ROUTE_MEDIA_ITEM = "mediaItem"
 
@@ -66,30 +66,32 @@ fun Navigation(
         mutableStateOf(browser.isConnected)
     }
 
-    LaunchedEffect(navController, browser.isConnected) {
+    val scope = rememberCoroutineScope()
+    DisposableEffect(navController, browser) {
         browserConnected = browser.isConnected
 
-        navController.addOnDestinationChangedListener { _, destination, arguments ->
-            var title = appname
-            if (destination.route.toString().startsWith(ROUTE_MEDIA_ITEM)) {
-                val mediaId = arguments?.getString("mediaItemId")
-                if (mediaId != null) {
-                    val parentItem = browser.getItem(mediaId.toString())
-                    if (parentItem.get().value != null) {
-                        title =
-                            parentItem.get().value?.mediaMetadata?.title.toString() // Use an empty string as a default if title is null
-                    } else {
-                        title = appname
-                        // FIXME
+        val listener = NavController.OnDestinationChangedListener { _, destination, arguments ->
+            val isBackStackEmpty = navController.previousBackStackEntry == null
+            nestedNavState.value = NestedNavState(
+                isBackStackEmpty = isBackStackEmpty,
+                currentTitle = appname
+            )
+            val mediaId = arguments?.getString("mediaItemId")
+            if (destination.route.toString().startsWith(ROUTE_MEDIA_ITEM) && mediaId != null) {
+                scope.launch {
+                    val title = try {
+                        browser.getItem(mediaId).awaitResult().value?.mediaMetadata?.title?.toString()
+                    } catch (e: Exception) {
+                        null
+                    }
+                    if (title != null && navController.currentBackStackEntry?.arguments?.getString("mediaItemId") == mediaId) {
+                        nestedNavState.value = NestedNavState(isBackStackEmpty, title)
                     }
                 }
             }
-
-            nestedNavState.value = NestedNavState(
-                isBackStackEmpty = navController.previousBackStackEntry == null,
-                currentTitle = title // Or get title from your route data
-            )
         }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
     }
 
     if (browserConnected) {
@@ -125,17 +127,13 @@ fun MenuRootScreen(
     controller: MediaController,
     reloadEventFlow: MutableSharedFlow<ReloadEvent>
 ) {
-    controller.prepare()
-    browser.prepare()
-
     var rootItem: MediaItem? by remember { mutableStateOf(null) }
-    val rootItemFuture = browser.getLibraryRoot(null)
-    LaunchedEffect(rootItemFuture) {
-        val rootItemResult = rootItemFuture.get();
-        if (rootItemResult != null && rootItemResult.value != null) {
-            rootItem = rootItemResult.value
-        } else {
-            rootItem = null
+    LaunchedEffect(browser, controller) {
+        controller.prepare()
+        rootItem = try {
+            browser.getLibraryRoot(null).awaitResult().value
+        } catch (e: Exception) {
+            null
         }
     }
 
@@ -268,17 +266,11 @@ class MediaItemPagingSource(
         val pageToken = (params.key) ?: 0
         val pageOffset = Math.floor((pageToken / params.loadSize).toDouble()).toInt()
 
-        val childrenFuture = browser.getChildren(
-            parentId, pageOffset, params.loadSize,
-            null
-        )
         return try {
-            val childrenResults = suspendCoroutine { continuation ->
-                childrenFuture.addListener({
-                    val children = childrenFuture.get()
-                    continuation.resume(children)
-                }, MoreExecutors.directExecutor())
-            }
+            val childrenResults = browser.getChildren(
+                parentId, pageOffset, params.loadSize,
+                null
+            ).awaitResult()
             val items = childrenResults?.value ?: emptyList()
             var nextKey: Int? = pageToken + params.loadSize
             var prevKey: Int? = pageToken - params.loadSize

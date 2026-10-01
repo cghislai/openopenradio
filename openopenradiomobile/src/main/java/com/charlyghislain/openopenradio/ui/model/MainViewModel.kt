@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 class MainViewModel : ViewModel() {
     val nestedNavState = MutableStateFlow(NestedNavState())
     var nestedNavigationUpHandler: (() -> Boolean)? = null
+    var notificationPermissionRequested = false
 }
 
 data class NestedNavState(

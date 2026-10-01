@@ -34,13 +34,21 @@ class RadioControllerViewModel(
     val reloadEventFlow = MutableSharedFlow<ReloadEvent>()
 
     private val imageLoader = ImageLoader.Builder(application).build() // Initialize ImageLoader
-
-    init {
-
-    }
+    private var listenedController: MediaController? = null
+    private var controllerListener: Player.Listener? = null
 
     fun setController(controller: MediaController?) {
+        if (controller === listenedController) {
+            return
+        }
+        // Detach from the previous controller so listeners don't pile up on every resume.
+        controllerListener?.let { listenedController?.removeListener(it) }
+        listenedController = controller
+        controllerListener = null
         this.controller.value = controller
+        if (controller == null) {
+            controllerConnected.value = false
+        }
 
         controller?.let { c ->
             viewModelScope.launch {
@@ -52,23 +60,19 @@ class RadioControllerViewModel(
                 controllerConnected.value = c.isConnected
             }
 
-            controller.addListener(ControllerPlayerListener {
+            val listener = ControllerPlayerListener {
                 viewModelScope.launch {
                     mediaItemFlow.value = controller.currentMediaItem
                     mediaPlayingFlow.value = controller.isPlaying
                     mediaStatusFlow.value = getPlayerStatus(controller)
+                    controllerConnected.value = controller.isConnected
                     backgroundColor.value =
                         getBackgroundColor(controller.currentMediaItem) ?: Color.White
                     foregroundColor.value = getComplementaryColor(backgroundColor.value)
                 }
-            })
-            controller.addListener(object : Player.Listener {
-                override fun onEvents(player: Player, events: Player.Events) {
-                    viewModelScope.launch {
-                        controllerConnected.value = controller.isConnected
-                    }
-                }
-            })
+            }
+            controller.addListener(listener)
+            controllerListener = listener
         }
     }
 
@@ -91,7 +95,7 @@ class RadioControllerViewModel(
         viewModelScope.launch {
             controller.value?.let { c ->
                 c.currentMediaItem?.let { item ->
-                    c.setRating(HeartRating(fav)).get()
+                    c.setRating(HeartRating(fav)).awaitResult()
                     reloadEventFlow.emit(ReloadEvent(item.mediaId))
                 }
             }

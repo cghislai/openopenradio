@@ -1,0 +1,6 @@
+- Updated for Android 16
+- Playback keeps going with the screen off, and reconnects after network drops
+- Better Android Auto playback, including resuming the last station
+- Settings now apply to playback
+- Warning when background playback is restricted by battery settings
+- Fixed a crash with large favorites lists and when pressing play while disconnected

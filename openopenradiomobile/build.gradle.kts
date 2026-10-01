@@ -41,6 +41,10 @@ android {
         compose = true
         viewBinding = true
     }
+    dependenciesInfo {
+        // The block is encrypted with a Google key, so F-Droid rejects APKs that carry it.
+        includeInApk = false
+    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

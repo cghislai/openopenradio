@@ -50,7 +50,7 @@ fun MyPlayerView(
 
     if (connected) {
         mediaItem?.let { item ->
-            val itemRating = item.mediaMetadata.userRating as HeartRating;
+            val isFavorite = (item.mediaMetadata.userRating as? HeartRating)?.isHeart ?: false
 
             Box(modifier = Modifier.fillMaxSize()) {
                 Row(
@@ -101,11 +101,8 @@ fun MyPlayerView(
                                 onPlayPauseClick = { viewModel.onPlayPause() }
                             )
                             BinaryHeartRating(
-                                isFavorite = itemRating.isHeart, // Pass the current favorite status
-                                onToggleFavorite = {
-                                    val newStatus = !itemRating.isHeart
-                                    viewModel.onSetRating(newStatus)
-                                },
+                                isFavorite = isFavorite,
+                                onToggleFavorite = { viewModel.onSetRating(!isFavorite) },
                                 color = foregroundColor
                             )
                         }

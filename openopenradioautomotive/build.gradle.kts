@@ -1,20 +1,21 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.jetbrains.kotlin.android)
-    id("kotlin-kapt")
-    id("com.google.dagger.hilt.android")
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
 }
 
 android {
     namespace = "com.charlyghislain.openopenradio.automotive"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.charlyghislain.openopenradio"
         minSdk = 28
-        targetSdk = 35
-        versionCode = 7
-        versionName = "1.0"
+        targetSdk = 36
+        versionCode = 9
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -29,11 +30,14 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
@@ -46,17 +50,13 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     implementation(libs.androidx.multidex)
+    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)
     implementation(libs.hilt)
 
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
 
-    kapt(libs.hilt.compiler)
-    kapt(libs.androidx.hilt.compiler)
-}
-
-// Allow references to generated code
-kapt {
-    correctErrorTypes = true
+    ksp(libs.hilt.compiler)
+    ksp(libs.androidx.hilt.compiler)
 }

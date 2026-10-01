@@ -9,7 +9,7 @@ class StationId(val source: RadioSource, val sourceId: String) {
 
     companion object {
         fun parseString(mediaId: String): StationId {
-            val parts = mediaId.split("/")
+            val parts = mediaId.split("/", limit = 2)
             return StationId(RadioSource.valueOf(parts[0]), parts[1])
         }
     }

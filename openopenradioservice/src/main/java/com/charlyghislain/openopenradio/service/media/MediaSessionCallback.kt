@@ -152,7 +152,8 @@ open class MediaSessionCallback(val service: OpenOpenRadioMediaPlaybackService) 
     @androidx.annotation.OptIn(UnstableApi::class)
     override fun onPlaybackResumption(
         mediaSession: MediaSession,
-        controller: MediaSession.ControllerInfo
+        controller: MediaSession.ControllerInfo,
+        isForPlayback: Boolean,
     ): ListenableFuture<MediaItemsWithStartPosition> {
         val currentItem = mediaSession.player.currentMediaItem
         val currentPosition = mediaSession.player.currentPosition

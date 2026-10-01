@@ -11,4 +11,7 @@
     <string name="menu_settings">Settings</string>
     <string name="nav_home_root">Root</string>
     <string name="player_empty_label">No item</string>
+    <string name="background_restricted_title">Background playback is restricted</string>
+    <string name="background_restricted_message">Android will stop the radio shortly after you leave the app or the screen turns off. To keep playing, open the app settings, then Battery, and allow background usage (Unrestricted or Optimized).</string>
+    <string name="background_restricted_open_settings">Open settings</string>
 </resources>

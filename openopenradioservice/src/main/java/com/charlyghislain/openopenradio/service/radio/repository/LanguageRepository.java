@@ -1,5 +1,7 @@
 package com.charlyghislain.openopenradio.service.radio.repository;
 
+import android.util.Log;
+
 import androidx.lifecycle.LiveData;
 
 import com.charlyghislain.openopenradio.service.radio.dao.RadioLanguageDao;
@@ -10,6 +12,7 @@ import com.charlyghislain.openopenradio.service.util.RequestCallback;
 import com.charlyghislain.openopenradio.service.client.webradio.WebRadioClient;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -32,34 +35,42 @@ public class LanguageRepository {
         return radioLanguageDao.getLanguageWithStats();
     }
 
-    public void fetchLanguages() {
-        webRadioClient.getLanguages(createAsyncCallback(value -> {
+    public CompletableFuture<Void> fetchLanguages() {
+        CompletableFuture<Void> done = new CompletableFuture<>();
+        webRadioClient.getLanguages(createAsyncCallback(done, value -> {
             List<RadioLanguage> radioLanguageList = value.stream()
                     .map(v -> new RadioLanguage(RadioSource.WEBRADIOS, v))
                     .collect(Collectors.toList());
-            radioLanguageDao.clearLanguages(RadioSource.WEBRADIOS);
-            radioLanguageDao.addLanguages(radioLanguageList);
+            radioLanguageDao.replaceLanguages(RadioSource.WEBRADIOS, radioLanguageList);
         }));
+        return done;
     }
 
 
-    private <T> RequestCallback<T> createAsyncCallback(Consumer<T> onSuccess) {
+    private <T> RequestCallback<T> createAsyncCallback(CompletableFuture<Void> done, Consumer<T> onSuccess) {
         return new RequestCallback<T>() {
             @Override
             public void onSuccess(T value) {
                 new Thread(() -> {
-                    onSuccess.accept(value);
+                    try {
+                        onSuccess.accept(value);
+                        done.complete(null);
+                    } catch (RuntimeException e) {
+                        reportError(e);
+                        done.completeExceptionally(e);
+                    }
                 }).start();
             }
 
             @Override
             public void onError(Throwable error) {
                 reportError(error);
+                done.completeExceptionally(error);
             }
         };
     }
 
     private void reportError(Throwable error) {
-
+        Log.w("LanguageRepository", "Error fetching content", error);
     }
 }

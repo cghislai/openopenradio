@@ -1,6 +1,12 @@
 package com.charlyghislain.openopenradio.ui.home
 
 import android.Manifest
+import android.app.ActivityManager
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.appcompat.app.AlertDialog
+import com.charlyghislain.openopenradio.R
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
@@ -70,16 +76,40 @@ class HomeFragment : Fragment() {
 
         if (
             Build.VERSION.SDK_INT >= 33 &&
+            !mainViewModel.notificationPermissionRequested &&
             context.checkSelfPermission(
                 Manifest.permission.POST_NOTIFICATIONS
             ) != PackageManager.PERMISSION_GRANTED
         ) {
+            // Ask once per app session rather than on every return to the home screen.
+            mainViewModel.notificationPermissionRequested = true
             requestPermissions(
                 arrayOf(Manifest.permission.POST_NOTIFICATIONS), /* requestCode= */
                 0
             )
         }
 
+        warnIfBackgroundRestricted(context)
+    }
+
+    private fun warnIfBackgroundRestricted(context: Context) {
+        val activityManager = context.getSystemService(ActivityManager::class.java)
+        // A restricted app gets its playback service stopped shortly after leaving the screen.
+        if (Build.VERSION.SDK_INT < 28 || mainViewModel.backgroundRestrictionWarned || !activityManager.isBackgroundRestricted) {
+            return
+        }
+        mainViewModel.backgroundRestrictionWarned = true
+        AlertDialog.Builder(context)
+            .setTitle(R.string.background_restricted_title)
+            .setMessage(R.string.background_restricted_message)
+            .setPositiveButton(R.string.background_restricted_open_settings) { _, _ ->
+                startActivity(
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        .setData(Uri.fromParts("package", context.packageName, null))
+                )
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     override fun onStop() {

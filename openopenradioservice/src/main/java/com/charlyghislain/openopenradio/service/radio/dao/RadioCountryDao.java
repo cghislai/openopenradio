@@ -5,6 +5,7 @@ import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.Transaction;
 
 import com.charlyghislain.openopenradio.service.radio.model.entity.RadioSource;
 import com.charlyghislain.openopenradio.service.radio.model.CountryWithStats;
@@ -24,6 +25,13 @@ public interface RadioCountryDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void addCountries(Collection<RadioCountry> counties);
+
+    // Atomic, so readers never observe the table between the delete and the insert.
+    @Transaction
+    default void replaceCountries(RadioSource source, Collection<RadioCountry> counties) {
+        clearCountries(source);
+        addCountries(counties);
+    }
 
     @Query("WITH CountryWithStats AS (\n" +
             "            SELECT g.name AS name,\n" +

@@ -5,6 +5,7 @@ import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.Transaction;
 
 import com.charlyghislain.openopenradio.service.radio.model.entity.RadioSource;
 import com.charlyghislain.openopenradio.service.radio.model.GenreWithStats;
@@ -24,6 +25,13 @@ public interface RadioGenreDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void addGenres(Collection<RadioGenre> genres);
+
+    // Atomic, so readers never observe the table between the delete and the insert.
+    @Transaction
+    default void replaceGenres(RadioSource source, Collection<RadioGenre> genres) {
+        clearGenres(source);
+        addGenres(genres);
+    }
 
     @Query("WITH GenreWithStats AS (\n" +
             "            SELECT g.name AS name,\n" +

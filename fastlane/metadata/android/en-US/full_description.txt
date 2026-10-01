@@ -1,0 +1,16 @@
+Open Open Radio is a simple, open source web radio player.
+
+Features:
+<ul>
+<li>Thousands of stations from the community-maintained <a href="https://github.com/jcorporation/webradiodb">webradiodb</a></li>
+<li>Browse by genre, country and language, or list all stations</li>
+<li>Favorites</li>
+<li>Background playback with a media notification, and automatic reconnection after network drops</li>
+<li>Android Auto support</li>
+</ul>
+
+The app does not collect any data. It contacts GitHub to download the station list, and the radio broadcasters to play their streams.
+
+<b>Android Auto:</b> Android Auto only lists media apps installed from Google Play by default. To use Open Open Radio in your car, enable developer mode in the Android Auto settings (tap the version number repeatedly), then enable "Unknown sources" in its developer settings.
+
+<b>Battery restrictions:</b> if the app's background usage is restricted, Android stops playback shortly after the screen turns off. The app warns you and links to the setting.

@@ -12,7 +12,6 @@ Browse & play your favorite webradios on your android devices.
 - web radio player
   - using media3 MediaSession
 - Android Auto support
-- Android automotive support
 
 
 ## Install

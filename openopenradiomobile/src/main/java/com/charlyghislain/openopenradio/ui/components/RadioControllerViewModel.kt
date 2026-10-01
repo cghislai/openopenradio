@@ -76,7 +76,7 @@ class RadioControllerViewModel(
         viewModelScope.launch {
             controller.value?.let { c ->
                 if (!c.isConnected) {
-                    throw IllegalStateException("Controller is not connected")
+                    return@launch
                 }
                 if (c.isPlaying) {
                     c.pause()

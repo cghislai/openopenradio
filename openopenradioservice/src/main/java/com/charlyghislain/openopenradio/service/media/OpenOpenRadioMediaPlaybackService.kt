@@ -10,6 +10,7 @@ import android.os.Build
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.datastore.core.DataStore
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
@@ -25,9 +26,13 @@ import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionResult
 import com.charlyghislain.openopenradio.service.R
 import com.charlyghislain.openopenradio.service.radio.repository.StationFavoritesRepository
+import com.charlyghislain.openopenradio.service.radio.settings.Settings
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import java.util.concurrent.CompletableFuture
 import javax.inject.Inject
 
@@ -83,9 +88,15 @@ open class OpenOpenRadioMediaPlaybackService : MediaSessionService() {
     @Inject
     lateinit var favoritesRepository: StationFavoritesRepository;
 
+    @Inject
+    lateinit var settingsStore: DataStore<Settings>
+
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
+
+        // The settings file is tiny and the player needs it before it can be built.
+        val settings = runBlocking { settingsStore.data.catch { emit(Settings()) }.first() }
 
         val audioAttributes = AudioAttributes.Builder()
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
@@ -96,19 +107,19 @@ open class OpenOpenRadioMediaPlaybackService : MediaSessionService() {
 
         val httpDatasource = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
-            .setConnectTimeoutMs(1000)
-            .setReadTimeoutMs(5000)
+            .setConnectTimeoutMs(settings.connectTimeoutMs)
+            .setReadTimeoutMs(settings.readTimeoutMs)
         val player = ExoPlayer.Builder(this)
             .setAudioAttributes(audioAttributes, true)
             .setHandleAudioBecomingNoisy(true)
             .setMediaSourceFactory(
                 DefaultMediaSourceFactory(httpDatasource)
-                    .setLiveTargetOffsetMs(5000)
+                    .setLiveTargetOffsetMs(settings.liveTargetOffsetMs.toLong())
             )
             .setLivePlaybackSpeedControl(
                 DefaultLivePlaybackSpeedControl.Builder()
-                    .setFallbackMaxPlaybackSpeed(1.05f)
-                    .setFallbackMinPlaybackSpeed(0.95f)
+                    .setFallbackMaxPlaybackSpeed(settings.fallbackMaxPlaybackSpeed)
+                    .setFallbackMinPlaybackSpeed(settings.fallbackMinPlaybackSpeed)
                     .build()
             )
             .build()

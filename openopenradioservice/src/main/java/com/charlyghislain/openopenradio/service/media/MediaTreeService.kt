@@ -121,6 +121,7 @@ class MediaTreeService(
                 .asListenableFuture()
         } else if (parentId == FAVORITES_ID) {
             return stationRepository.allStationsFavorites
+                .map { list -> getListPage(list, pageOffset, pageSize) }
                 .map { list -> list.map { g -> buildStationItem(g) } }
                 .asListenableFuture()
         } else if (parentId == ALL_ID) {

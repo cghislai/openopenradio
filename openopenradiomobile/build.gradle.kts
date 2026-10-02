@@ -15,8 +15,8 @@ android {
         applicationId = "com.charlyghislain.openopenradio"
         minSdk = 24
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.1"
+        versionCode = 11
+        versionName = "1.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -26,7 +26,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

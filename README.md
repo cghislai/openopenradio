@@ -31,6 +31,34 @@ Android Auto only lists media apps installed from Google Play by default. To use
 If the app's battery usage is set to "Restricted", Android stops playback shortly after the screen turns off.
 Allow background usage in the app settings (Battery: Unrestricted or Optimized).
 
+## Releasing
+
+GitHub Actions builds and publishes an APK when a stable version tag such as `v1.2.0` is pushed.
+The tag must match `versionName` in the APK. Increment `versionCode` and add
+`fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` before creating the tag.
+
+Configure these repository Actions secrets once:
+
+- `ANDROID_KEYSTORE_BASE64`: the developer keystore encoded with `base64 -w 0`.
+- `ANDROID_KEYSTORE_PASSWORD`: the keystore password, without the blank lines from a password file.
+
+If the private key uses a different password, also set `ANDROID_KEY_PASSWORD`. If the keystore
+contains several keys, set the repository variable `ANDROID_KEY_ALIAS` to the developer key's alias.
+The workflow checks the signing certificate against the existing developer certificate.
+
+Install Java 21 for local builds. `gradle/gradle-daemon-jvm.properties` also requires the Gradle
+daemon to use Java 21, which keeps R8 output consistent with F-Droid. The release workflow compares
+two clean unsigned builds, signs using build-tools 34 with APK signature schemes v2/v3, and verifies
+signature copying before publishing. See [F-Droid's reproducibility guidance](https://f-droid.org/docs/Reproducible_Builds/).
+
+Each release contains `openopenradio-<versionName>.apk` and its `.apk.sha256` checksum. This keeps
+the existing F-Droid binary URL compatible. F-Droid metadata lives in fdroiddata and uses tag-based
+updates; this repository's workflow does not modify it.
+
+To retry a failed release, run **Release APK** from the Actions tab and enter the existing tag.
+Retries resume an unfinished draft or accept an identical published APK; a different published APK
+is never overwritten. Merge the workflow branch before creating the next version tag.
+
 ## Privacy
 
 - This app does not collect any information
@@ -38,4 +66,3 @@ Allow background usage in the app settings (Battery: Unrestricted or Optimized).
   - Github, for web radio sourced from https://github.com/jcorporation/webradiodb
   - Web radio broacasters, as you need to connect to their stream
   - Your android OS
-

@@ -19,3 +19,15 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Gson reads these models through reflection using their original JSON field names.
+# Keep their no-argument constructors and generic field signatures as well.
+-keepattributes Signature
+-keep,allowoptimization class com.charlyghislain.openopenradio.service.client.webradio.model.WebRadioStation {
+    <init>();
+    <fields>;
+}
+-keep,allowoptimization class com.charlyghislain.openopenradio.service.client.webradio.model.WebRadioAlternativeStream {
+    <init>();
+    <fields>;
+}

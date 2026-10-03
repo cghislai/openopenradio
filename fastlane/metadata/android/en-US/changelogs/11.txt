@@ -1,0 +1,1 @@
+- Reduced APK size by about 80% with code and resource shrinking

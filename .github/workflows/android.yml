@@ -6,21 +6,30 @@ on:
   pull_request:
     branches: [ "master" ]
 
+permissions:
+  contents: read
+
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-    - uses: actions/checkout@v4
-    - name: set up JDK
-      uses: actions/setup-java@v4
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       with:
-        java-version: '17'
+        persist-credentials: false
+    - name: set up JDK
+      uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+      with:
+        java-version: '21'
         distribution: 'temurin'
         cache: gradle
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+    - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+      with:
+        packages: 'platforms;android-37.0 build-tools;36.0.0'
+        log-accepted-android-sdk-licenses: false
+    - name: Test release automation
+      run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'
     - name: Build with Gradle
-      run: ./gradlew build
+      run: ./gradlew build --no-daemon

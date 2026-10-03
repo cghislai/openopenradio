@@ -1,0 +1,105 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to release (for example v1.2.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+        with:
+          packages: 'platforms;android-37.0 build-tools;36.0.0'
+          log-accepted-android-sdk-licenses: false
+      - name: Validate tag
+        run: python3 .github/scripts/release.py check-tag --tag "$RELEASE_TAG"
+      - name: Build APK twice from clean checkouts
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew :openopenradiomobile:assembleRelease --no-daemon --no-build-cache --no-configuration-cache
+          rebuild_dir="$RUNNER_TEMP/rebuild"
+          git clone --quiet --no-hardlinks . "$rebuild_dir"
+          git -C "$rebuild_dir" checkout --quiet --detach HEAD
+          (
+            cd "$rebuild_dir"
+            ./gradlew :openopenradiomobile:assembleRelease --no-daemon --no-build-cache --no-configuration-cache
+          )
+          apk_path=openopenradiomobile/build/outputs/apk/release/openopenradiomobile-release-unsigned.apk
+          cmp "$apk_path" "$rebuild_dir/$apk_path"
+          python3 .github/scripts/release.py prepare --tag "$RELEASE_TAG" --apk "$apk_path" --output dist
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: unsigned-release
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+        with:
+          packages: 'build-tools;34.0.0'
+          log-accepted-android-sdk-licenses: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: unsigned-release
+          path: dist/
+      - name: Install signature-copy verification tool
+        run: |
+          python3 -m venv "$RUNNER_TEMP/release-tools"
+          "$RUNNER_TEMP/release-tools/bin/pip" install apksigcopier==1.1.1
+      - name: Sign and verify reproducibility
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ vars.ANDROID_KEY_ALIAS }}
+        run: '"$RUNNER_TEMP/release-tools/bin/python" .github/scripts/release.py sign --output dist'
+      - name: Publish verified APK and checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 .github/scripts/release.py publish --output dist
